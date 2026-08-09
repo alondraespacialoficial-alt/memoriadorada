@@ -258,6 +258,7 @@ export async function fetchQuotationsFromSupabase(): Promise<Quotation[] | null>
       items: typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [],
       deposit: Number(row.deposit || 0),
       totalAmount: Number(row.total_amount || 0),
+      cost: Number(row.cost || 0),
       status: row.status as Quotation['status'],
       notes: row.notes || undefined,
       referenceImageUrls: (typeof row.reference_image_urls === 'string'
@@ -284,6 +285,7 @@ export async function saveQuotationToSupabase(quotation: Quotation): Promise<boo
       items: quotation.items,
       deposit: quotation.deposit,
       total_amount: quotation.totalAmount,
+      cost: quotation.cost ?? 0,
       status: quotation.status,
       notes: quotation.notes ?? null,
       reference_image_urls: quotation.referenceImageUrls ?? null,

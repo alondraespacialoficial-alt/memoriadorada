@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   items JSONB NOT NULL DEFAULT '[]'::jsonb,
   deposit NUMERIC DEFAULT 0,
   total_amount NUMERIC DEFAULT 0,
+  cost NUMERIC DEFAULT 0,
   status TEXT DEFAULT 'Pendiente',
   notes TEXT,
   reference_image_urls JSONB DEFAULT '[]'::jsonb,
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
 
 -- Si la tabla quotations ya existía antes de esta actualización, agrega la columna faltante
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
 
 -- 3. TABLA DE CONFIGURACIÓN DEL SITIO
 CREATE TABLE IF NOT EXISTS public.site_settings (

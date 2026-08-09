@@ -232,6 +232,7 @@ export default function App() {
       })),
       deposit: 0,
       totalAmount: total,
+      cost: 0,
       status: 'Pendiente',
       notes: notes || 'Solicitado directamente desde la tienda',
       referenceImageUrls: referenceImageUrls && referenceImageUrls.length > 0 ? referenceImageUrls : undefined,

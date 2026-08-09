@@ -154,6 +154,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       })),
       deposit: 0,
       totalAmount: totalWithDiscount,
+      cost: 0,
       status: 'Pendiente',
       notes: specialNotes,
       referenceImageUrls: photoUrls,

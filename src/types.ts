@@ -33,6 +33,7 @@ export interface Quotation {
   }[];
   deposit: number; // Anticipo
   totalAmount: number; // Pago total
+  cost?: number; // Gasto/costo real del servicio para el negocio, usado para calcular la ganancia neta
   status: 'Pendiente' | 'En Proceso' | 'Listo' | 'Entregado' | 'Cancelado';
   notes?: string;
   referenceImageUrl?: string; // deprecated: kept for backward compatibility with old quotations

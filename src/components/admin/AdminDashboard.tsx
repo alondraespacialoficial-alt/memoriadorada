@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   items JSONB NOT NULL DEFAULT '[]'::jsonb,
   deposit NUMERIC DEFAULT 0,
   total_amount NUMERIC DEFAULT 0,
+  cost NUMERIC DEFAULT 0,
   status TEXT DEFAULT 'Pendiente',
   notes TEXT,
   reference_image_urls JSONB DEFAULT '[]'::jsonb,
@@ -227,6 +228,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -387,6 +389,7 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
       ],
       deposit: 300,
       totalAmount: 650,
+      cost: 0,
       status: 'Pendiente',
       notes: '',
     });
@@ -443,6 +446,8 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
   const totalSales = quotations.reduce((sum, q) => sum + q.totalAmount, 0);
   const totalDeposits = quotations.reduce((sum, q) => sum + q.deposit, 0);
   const pendingBalance = totalSales - totalDeposits;
+  const totalCosts = quotations.reduce((sum, q) => sum + (q.cost || 0), 0);
+  const netProfit = totalSales - totalCosts;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#080A0C] text-[#F3E5C8] font-sans">
@@ -728,6 +733,30 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                   <UserCheck className="w-6 h-6" />
                 </div>
               </div>
+
+              <div className="bg-[#12151B] border border-[#3D3016] p-5 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-[#A89878] block">Gasto Total en Servicios</span>
+                  <span className="font-serif text-2xl font-bold text-red-300">
+                    {formatCurrency(totalCosts)}
+                  </span>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-red-950/40 border border-red-800/40 flex items-center justify-center text-red-300">
+                  <DollarSign className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-[#12151B] border border-[#3D3016] p-5 rounded-2xl flex items-center justify-between sm:col-span-2">
+                <div>
+                  <span className="text-xs text-[#A89878] block">Ganancia Neta (Ventas - Gastos)</span>
+                  <span className={`font-serif text-2xl font-bold ${netProfit >= 0 ? 'text-[#25D366]' : 'text-red-400'}`}>
+                    {formatCurrency(netProfit)}
+                  </span>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-[#1C271C] border border-[#25D366]/30 flex items-center justify-center text-[#25D366]">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -763,6 +792,8 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                       <th className="py-3 px-4">Artículos</th>
                       <th className="py-3 px-4">Anticipo</th>
                       <th className="py-3 px-4">Pago Total</th>
+                      <th className="py-3 px-4">Costo</th>
+                      <th className="py-3 px-4">Ganancia</th>
                       <th className="py-3 px-4">Estado</th>
                       <th className="py-3 px-4 text-right">Acciones</th>
                     </tr>
@@ -794,6 +825,12 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                         </td>
                         <td className="py-3.5 px-4 font-mono font-bold text-[#F3E5C8]">
                           {formatCurrency(q.totalAmount)}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-red-300">
+                          {formatCurrency(q.cost || 0)}
+                        </td>
+                        <td className={`py-3.5 px-4 font-mono font-bold ${(q.totalAmount - (q.cost || 0)) >= 0 ? 'text-[#25D366]' : 'text-red-400'}`}>
+                          {formatCurrency(q.totalAmount - (q.cost || 0))}
                         </td>
                         <td className="py-3.5 px-4">
                           <span
@@ -1338,6 +1375,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   items JSONB NOT NULL DEFAULT '[]'::jsonb,
   deposit NUMERIC DEFAULT 0,
   total_amount NUMERIC DEFAULT 0,
+  cost NUMERIC DEFAULT 0,
   status TEXT DEFAULT 'Pendiente',
   notes TEXT,
   reference_image_urls JSONB DEFAULT '[]'::jsonb,
@@ -1370,6 +1408,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 
 -- Si las tablas ya existían antes de esta actualización, agrega las columnas faltantes
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;`}</pre>
                 </div>
@@ -1702,6 +1741,18 @@ ON storage.objects FOR SELECT USING (bucket_id = 'product-images');`}
                     className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3 py-2 text-[#E2B755] font-bold"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[#A89878] mb-1 font-semibold">
+                  Costo / Gasto del Servicio ($ MXN) <span className="text-[10px] font-normal normal-case">(materiales, impresión, marco, etc. — solo visible para ti)</span>
+                </label>
+                <input
+                  type="number"
+                  value={editingQuotation.cost || 0}
+                  onChange={(e) => setEditingQuotation({ ...editingQuotation, cost: Number(e.target.value) })}
+                  className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3 py-2 text-red-300 font-bold"
+                />
               </div>
 
               <div>
