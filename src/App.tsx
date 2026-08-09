@@ -23,7 +23,10 @@ import {
   saveQuotationToSupabase,
   deleteQuotationFromSupabase,
   saveSettingsToSupabase,
-  getSupabaseClient
+  getSupabaseClient,
+  getAdminSession,
+  onAdminAuthStateChange,
+  signOutAdmin
 } from './lib/supabase';
 
 export default function App() {
@@ -95,10 +98,15 @@ export default function App() {
 
   // Admin Modals & Auth State
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
-    return sessionStorage.getItem('charlitron_admin_logged_in') === 'true';
-  });
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+
+  // Restore/track admin session from Supabase Auth (source of truth, not a local flag)
+  useEffect(() => {
+    getAdminSession().then((session) => setIsAdminLoggedIn(!!session));
+    const unsubscribe = onAdminAuthStateChange((loggedIn) => setIsAdminLoggedIn(loggedIn));
+    return unsubscribe;
+  }, []);
 
   // Load from Supabase on Mount if configured
   useEffect(() => {
@@ -232,7 +240,6 @@ export default function App() {
   // --- ADMIN HANDLERS ---
   const handleLoginSuccess = () => {
     setIsAdminLoggedIn(true);
-    sessionStorage.setItem('charlitron_admin_logged_in', 'true');
     setIsAdminPanelOpen(true);
     addToast({
       type: 'success',
@@ -242,8 +249,8 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    signOutAdmin().catch((err) => console.error('Supabase sign-out err:', err));
     setIsAdminLoggedIn(false);
-    sessionStorage.removeItem('charlitron_admin_logged_in');
     setIsAdminPanelOpen(false);
     addToast({
       type: 'info',

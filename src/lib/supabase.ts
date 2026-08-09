@@ -73,6 +73,44 @@ export function resetSupabaseClient() {
   lastUsedKey = '';
 }
 
+// --- ADMIN AUTH (Supabase Auth) ---
+
+export async function signInAdmin(email: string, password: string): Promise<{ success: boolean; message: string }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, message: 'Supabase no está configurado. Contacta al desarrollador.' };
+  }
+
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  if (error) {
+    return { success: false, message: 'Correo o contraseña incorrectos. Verifica tus credenciales de administrador.' };
+  }
+  return { success: true, message: 'Sesión iniciada correctamente.' };
+}
+
+export async function signOutAdmin(): Promise<void> {
+  const client = getSupabaseClient();
+  if (!client) return;
+  await client.auth.signOut();
+}
+
+export async function getAdminSession() {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  const { data } = await client.auth.getSession();
+  return data.session;
+}
+
+// Subscribe to auth changes; returns an unsubscribe function
+export function onAdminAuthStateChange(callback: (isLoggedIn: boolean) => void): () => void {
+  const client = getSupabaseClient();
+  if (!client) return () => {};
+  const { data } = client.auth.onAuthStateChange((_event, session) => {
+    callback(!!session);
+  });
+  return () => data.subscription.unsubscribe();
+}
+
 // Test connection
 export async function testSupabaseConnection(customUrl?: string, customKey?: string): Promise<{ success: boolean; message: string }> {
   try {

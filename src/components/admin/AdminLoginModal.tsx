@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, KeyRound, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Lock, Mail, KeyRound, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
+import { signInAdmin } from '../../lib/supabase';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -15,23 +16,24 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
     const cleanEmail = email.trim().toLowerCase();
-    
-    const isValidAdmin =
-      (cleanEmail === 'ventas@charlitron.com' && password === '2003') ||
-      (cleanEmail === 'betoronazo@gmail.com' && password === 'Betofifa12');
 
-    if (isValidAdmin) {
-      setError('');
+    const result = await signInAdmin(cleanEmail, password);
+    setIsLoading(false);
+
+    if (result.success) {
       onLoginSuccess();
       onClose();
     } else {
-      setError('Correo o contraseña incorrectos. Verifica tus credenciales de administrador.');
+      setError(result.message);
     }
   };
 
@@ -114,11 +116,16 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#C59B27] to-[#8F6C13] text-[#0B0D10] font-extrabold text-sm hover:brightness-110 transition-all shadow-lg flex items-center justify-center gap-2"
+            disabled={isLoading}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#C59B27] to-[#8F6C13] text-[#0B0D10] font-extrabold text-sm hover:brightness-110 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             id="admin-login-submit-btn"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Iniciar Sesión en el Panel</span>
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            <span>{isLoading ? 'Verificando...' : 'Iniciar Sesión en el Panel'}</span>
           </button>
         </form>
 
