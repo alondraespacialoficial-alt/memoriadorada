@@ -295,6 +295,56 @@ export async function saveQuotationToSupabase(quotation: Quotation): Promise<boo
   }
 }
 
+// --- QUOTATIONS RETRY QUEUE ---
+// Guards against losing a customer's quote request if Supabase hiccups momentarily.
+const PENDING_QUOTATIONS_KEY = 'charlitron_pending_quotations';
+
+function getPendingQuotations(): Quotation[] {
+  try {
+    const raw = localStorage.getItem(PENDING_QUOTATIONS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setPendingQuotations(list: Quotation[]) {
+  localStorage.setItem(PENDING_QUOTATIONS_KEY, JSON.stringify(list));
+}
+
+function queuePendingQuotation(quotation: Quotation) {
+  const pending = getPendingQuotations();
+  if (!pending.some((q) => q.id === quotation.id)) {
+    setPendingQuotations([...pending, quotation]);
+  }
+}
+
+// Tries once, waits, retries once more, and if it still fails queues it for later
+export async function saveQuotationWithRetry(quotation: Quotation): Promise<boolean> {
+  let ok = await saveQuotationToSupabase(quotation);
+  if (!ok) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    ok = await saveQuotationToSupabase(quotation);
+  }
+  if (!ok) {
+    queuePendingQuotation(quotation);
+  }
+  return ok;
+}
+
+// Resends any quotations that failed to sync in a previous session
+export async function flushPendingQuotations(): Promise<void> {
+  const pending = getPendingQuotations();
+  if (pending.length === 0) return;
+
+  const stillPending: Quotation[] = [];
+  for (const q of pending) {
+    const ok = await saveQuotationToSupabase(q);
+    if (!ok) stillPending.push(q);
+  }
+  setPendingQuotations(stillPending);
+}
+
 export async function deleteQuotationFromSupabase(quotationId: string): Promise<boolean> {
   const client = getSupabaseClient();
   if (!client) return false;

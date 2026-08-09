@@ -23,6 +23,8 @@ import {
   saveProductToSupabase,
   deleteProductFromSupabase,
   saveQuotationToSupabase,
+  saveQuotationWithRetry,
+  flushPendingQuotations,
   deleteQuotationFromSupabase,
   saveSettingsToSupabase,
   getSupabaseClient,
@@ -132,6 +134,9 @@ export default function App() {
         if (cloudSettings) {
           setSettings(cloudSettings);
         }
+
+        // Resend any quotations that failed to sync in a previous session
+        flushPendingQuotations().catch((err) => console.warn('Could not flush pending quotations:', err));
       } catch (err) {
         console.warn('Could not auto-fetch from Supabase:', err);
       }
@@ -229,7 +234,7 @@ export default function App() {
     };
 
     setQuotations((prev) => [newQuotation, ...prev]);
-    saveQuotationToSupabase(newQuotation).catch((err) => console.error('Supabase quote sync err:', err));
+    saveQuotationWithRetry(newQuotation).catch((err) => console.error('Supabase quote sync err:', err));
 
     addToast({
       type: 'success',
