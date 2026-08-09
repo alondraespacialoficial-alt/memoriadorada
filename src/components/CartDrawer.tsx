@@ -18,7 +18,7 @@ interface CartDrawerProps {
     items: CartItem[],
     total: number,
     notes?: string,
-    referenceImageUrl?: string
+    referenceImageUrls?: string[]
   ) => Quotation | void;
   onOpenReceipt?: (quotation: Quotation) => void;
   onShowToast?: (toast: Omit<ToastMessage, 'id'>) => void;
@@ -39,10 +39,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [specialNotes, setSpecialNotes] = useState('');
-  const [uploadedPhotoName, setUploadedPhotoName] = useState<string | undefined>(undefined);
-  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | undefined>(undefined);
+  const [uploadedPhotos, setUploadedPhotos] = useState<{ name: string; url: string }[]>([]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [nameError, setNameError] = useState(false);
+
+  const MAX_PHOTOS = 6;
 
   if (!isOpen) return null;
 
@@ -58,42 +59,65 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const totalSavings = totalBeforeDiscount - totalWithDiscount;
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setUploadedPhotoName(file.name);
-      setIsUploadingPhoto(true);
+    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0) return;
 
+    const availableSlots = MAX_PHOTOS - uploadedPhotos.length;
+    const filesToProcess = files.slice(0, availableSlots);
+
+    if (files.length > availableSlots && onShowToast) {
+      onShowToast({
+        type: 'info',
+        title: 'Límite de fotos',
+        message: `Solo puedes adjuntar hasta ${MAX_PHOTOS} fotos. Se agregaron las primeras ${availableSlots}.`,
+      });
+    }
+
+    setIsUploadingPhoto(true);
+
+    let processed = 0;
+    filesToProcess.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64Url = reader.result as string;
-        setUploadedPhotoUrl(base64Url);
+        let finalUrl = base64Url;
 
         try {
           const { uploadImageToSupabase } = await import('../lib/supabase');
           const uploadRes = await uploadImageToSupabase(file, 'product-images');
           if (uploadRes.url) {
-            setUploadedPhotoUrl(uploadRes.url);
+            finalUrl = uploadRes.url;
           }
         } catch (err) {
           console.warn('Could not upload image to Supabase storage, using base64 preview:', err);
         }
 
-        setIsUploadingPhoto(false);
-        if (onShowToast) {
-          onShowToast({
-            type: 'success',
-            title: '📷 Foto adjuntada',
-            message: `"${file.name}" guardada como referencia para tu cotización.`,
-          });
+        setUploadedPhotos((prev) => [...prev, { name: file.name, url: finalUrl }]);
+
+        processed += 1;
+        if (processed === filesToProcess.length) {
+          setIsUploadingPhoto(false);
+          if (onShowToast) {
+            onShowToast({
+              type: 'success',
+              title: filesToProcess.length > 1 ? '📷 Fotos adjuntadas' : '📷 Foto adjuntada',
+              message:
+                filesToProcess.length > 1
+                  ? `${filesToProcess.length} imágenes guardadas como referencia para tu cotización.`
+                  : `"${filesToProcess[0].name}" guardada como referencia para tu cotización.`,
+            });
+          }
         }
       };
       reader.readAsDataURL(file);
-    }
+    });
+
+    // Allow re-selecting the same file(s) afterward
+    e.target.value = '';
   };
 
-  const handleRemovePhoto = () => {
-    setUploadedPhotoName(undefined);
-    setUploadedPhotoUrl(undefined);
+  const handleRemovePhoto = (index: number) => {
+    setUploadedPhotos((prev) => prev.filter((_, i) => i !== index));
     if (onShowToast) {
       onShowToast({
         type: 'info',
@@ -110,9 +134,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }
     setNameError(false);
 
+    const photoUrls = uploadedPhotos.map((p) => p.url);
+
     let recorded: Quotation | void;
     if (onRecordQuotation) {
-      recorded = onRecordQuotation(customerName, customerPhone, cartItems, totalWithDiscount, specialNotes, uploadedPhotoUrl);
+      recorded = onRecordQuotation(customerName, customerPhone, cartItems, totalWithDiscount, specialNotes, photoUrls);
     }
 
     const receiptObj: Quotation = (recorded as Quotation) || {
@@ -130,7 +156,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       totalAmount: totalWithDiscount,
       status: 'Pendiente',
       notes: specialNotes,
-      referenceImageUrl: uploadedPhotoUrl,
+      referenceImageUrls: photoUrls,
     };
 
     if (onShowToast) {
@@ -153,8 +179,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }
     setNameError(false);
 
+    const photoUrls = uploadedPhotos.map((p) => p.url);
+
     if (onRecordQuotation) {
-      onRecordQuotation(customerName, customerPhone, cartItems, totalWithDiscount, specialNotes, uploadedPhotoUrl);
+      onRecordQuotation(customerName, customerPhone, cartItems, totalWithDiscount, specialNotes, photoUrls);
     }
 
     const waUrl = buildWhatsAppLink(
@@ -163,7 +191,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       customerPhone,
       cartItems,
       specialNotes,
-      uploadedPhotoName
+      uploadedPhotos.map((p) => p.name)
     );
 
     if (onShowToast) {
@@ -403,38 +431,40 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <div>
                   <label className="block text-xs font-semibold text-[#A89878] mb-1 flex items-center gap-1">
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Adjuntar foto de muestra (Opcional)</span>
+                    <span>Adjuntar fotos de muestra (Opcional, hasta {MAX_PHOTOS})</span>
                   </label>
-                  
-                  {uploadedPhotoUrl ? (
-                    <div className="p-2.5 rounded-xl bg-[#080A0C] border border-emerald-500/40 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 overflow-hidden">
-                        <img
-                          src={uploadedPhotoUrl}
-                          alt="Vista previa"
-                          className="w-10 h-10 object-cover rounded-lg border border-[#3D3016] shrink-0"
-                        />
-                        <div className="truncate">
-                          <p className="text-xs font-bold text-emerald-400 truncate">
-                            {uploadedPhotoName || 'Imagen adjuntada'}
-                          </p>
-                          <p className="text-[10px] text-[#A89878]">Foto cargada con éxito</p>
+
+                  {uploadedPhotos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mb-2">
+                      {uploadedPhotos.map((photo, index) => (
+                        <div
+                          key={`${photo.name}-${index}`}
+                          className="relative p-1 rounded-xl bg-[#080A0C] border border-emerald-500/40 group"
+                        >
+                          <img
+                            src={photo.url}
+                            alt={photo.name}
+                            className="w-full h-16 object-cover rounded-lg border border-[#3D3016]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhoto(index)}
+                            className="absolute -top-1.5 -right-1.5 p-1 rounded-full bg-[#0F1217] border border-[#3D3016] text-[#A89878] hover:text-red-400 transition-colors"
+                            title="Quitar foto"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleRemovePhoto}
-                        className="p-1 text-[#A89878] hover:text-red-400 transition-colors"
-                        title="Quitar foto"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      ))}
                     </div>
-                  ) : (
+                  )}
+
+                  {uploadedPhotos.length < MAX_PHOTOS && (
                     <div className="relative">
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         onChange={handlePhotoUpload}
                         className="hidden"
                         id="cart-photo-upload"
@@ -451,7 +481,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         ) : (
                           <>
                             <Upload className="w-4 h-4 text-[#E2B755]" />
-                            <span>Seleccionar imagen de tu dispositivo</span>
+                            <span>
+                              {uploadedPhotos.length > 0
+                                ? 'Agregar otra foto'
+                                : 'Seleccionar imagen(es) de tu dispositivo'}
+                            </span>
                           </>
                         )}
                       </label>
@@ -460,6 +494,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </div>
 
               </div>
+
 
               {/* Submit CTA WhatsApp Button */}
               <button

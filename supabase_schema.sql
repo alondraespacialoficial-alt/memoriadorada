@@ -36,8 +36,12 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   total_amount NUMERIC DEFAULT 0,
   status TEXT DEFAULT 'Pendiente',
   notes TEXT,
+  reference_image_urls JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Si la tabla quotations ya existía antes de esta actualización, agrega la columna faltante
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
 
 -- 3. TABLA DE CONFIGURACIÓN DEL SITIO
 CREATE TABLE IF NOT EXISTS public.site_settings (

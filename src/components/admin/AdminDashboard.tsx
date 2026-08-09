@@ -191,6 +191,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   total_amount NUMERIC DEFAULT 0,
   status TEXT DEFAULT 'Pendiente',
   notes TEXT,
+  reference_image_urls JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -221,6 +222,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 -- Si la tabla site_settings ya existía antes de esta actualización, agrega las columnas faltantes
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotations ENABLE ROW LEVEL SECURITY;
@@ -1293,6 +1295,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   total_amount NUMERIC DEFAULT 0,
   status TEXT DEFAULT 'Pendiente',
   notes TEXT,
+  reference_image_urls JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -1305,6 +1308,8 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
   hero_subtitle TEXT,
   hero_tagline TEXT,
   hero_image_url TEXT,
+  before_original_url TEXT,
+  before_restored_url TEXT,
   hero_cta_text TEXT,
   whatsapp_number TEXT,
   whatsapp_display_phone TEXT,
@@ -1316,7 +1321,12 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
   footer_phone TEXT,
   benefits JSONB DEFAULT '[]'::jsonb,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);`}</pre>
+);
+
+-- Si las tablas ya existían antes de esta actualización, agrega las columnas faltantes
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;`}</pre>
                 </div>
 
                 <div className="p-3 bg-[#1A160E] border border-[#423315] rounded-xl text-[11px] text-[#C9B17E] space-y-1">

@@ -14,7 +14,7 @@ export function buildWhatsAppLink(
   customerPhone: string,
   cartItems: CartItem[],
   customNotes?: string,
-  uploadedPhotoName?: string
+  uploadedPhotoNames?: string[]
 ): string {
   // Clean phone number (remove spaces, plus sign, etc.)
   const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
@@ -58,8 +58,8 @@ export function buildWhatsAppLink(
   if (customerPhone.trim()) {
     message += `📞 *Teléfono:* ${customerPhone.trim()}\n`;
   }
-  if (uploadedPhotoName) {
-    message += `📷 *Imagen adjunta:* _(${uploadedPhotoName})_\n`;
+  if (uploadedPhotoNames && uploadedPhotoNames.length > 0) {
+    message += `📷 *Imágenes adjuntas (${uploadedPhotoNames.length}):* _(${uploadedPhotoNames.join(', ')})_\n`;
   }
   if (customNotes && customNotes.trim()) {
     message += `📝 *Notas generales:* _${customNotes.trim()}_\n`;

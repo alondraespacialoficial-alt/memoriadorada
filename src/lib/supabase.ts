@@ -258,6 +258,9 @@ export async function fetchQuotationsFromSupabase(): Promise<Quotation[] | null>
       totalAmount: Number(row.total_amount || 0),
       status: row.status as Quotation['status'],
       notes: row.notes || undefined,
+      referenceImageUrls: (typeof row.reference_image_urls === 'string'
+        ? JSON.parse(row.reference_image_urls)
+        : row.reference_image_urls) || undefined,
     }));
   } catch (err) {
     console.error('Supabase quotations fetch error:', err);
@@ -281,6 +284,7 @@ export async function saveQuotationToSupabase(quotation: Quotation): Promise<boo
       total_amount: quotation.totalAmount,
       status: quotation.status,
       notes: quotation.notes ?? null,
+      reference_image_urls: quotation.referenceImageUrls ?? null,
     };
 
     const { error } = await client.from('quotations').upsert(row, { onConflict: 'id' });

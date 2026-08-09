@@ -34,7 +34,8 @@ export interface Quotation {
   totalAmount: number; // Pago total
   status: 'Pendiente' | 'En Proceso' | 'Listo' | 'Entregado' | 'Cancelado';
   notes?: string;
-  referenceImageUrl?: string;
+  referenceImageUrl?: string; // deprecated: kept for backward compatibility with old quotations
+  referenceImageUrls?: string[];
 }
 
 export interface SiteSettings {

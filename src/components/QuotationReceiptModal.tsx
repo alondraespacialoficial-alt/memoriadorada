@@ -33,6 +33,14 @@ export const QuotationReceiptModal: React.FC<QuotationReceiptModalProps> = ({
 
   const isPaidDeposit = deposit > 0;
 
+  // Support both the legacy single-image field and the new multi-image array
+  const referenceImages =
+    quotation.referenceImageUrls && quotation.referenceImageUrls.length > 0
+      ? quotation.referenceImageUrls
+      : quotation.referenceImageUrl
+      ? [quotation.referenceImageUrl]
+      : [];
+
   const handleDownloadPDF = async () => {
     if (onShowToast) {
       onShowToast({
@@ -377,8 +385,11 @@ export const QuotationReceiptModal: React.FC<QuotationReceiptModalProps> = ({
       text += `*Anticipo Requerido (50%):* ${formatCurrency(Math.round(total * 0.5))}\n`;
       text += `*Anticipo Recibido:* $0.00 MXN (Pendiente de pago/confirmación)\n`;
     }
-    if (quotation.referenceImageUrl) {
-      text += `*Imagen de muestra:* ${quotation.referenceImageUrl}\n`;
+    if (referenceImages.length > 0) {
+      text += `*Imágenes de muestra (${referenceImages.length}):*\n`;
+      referenceImages.forEach((url, index) => {
+        text += `  ${index + 1}. ${url}\n`;
+      });
     }
     text += `\n-----------------------------------\n`;
     text += `*GARANTÍA Y CONDICIONES DEL TRABAJO*\n`;
@@ -519,36 +530,43 @@ export const QuotationReceiptModal: React.FC<QuotationReceiptModalProps> = ({
           </div>
 
           {/* Customer Reference Image Section (if exists) */}
-          {quotation.referenceImageUrl && (
+          {referenceImages.length > 0 && (
             <div className="p-4 rounded-2xl bg-[#141821] print:bg-gray-50 border border-[#3D3016] print:border-gray-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-[#D4AF37] print:text-gray-800 flex items-center gap-1.5">
-                  <ImageIcon className="w-4 h-4" />
-                  <span>Foto / Imagen de Muestra Adjunta</span>
-                </p>
-                <a
-                  href={quotation.referenceImageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-[#E2B755] hover:underline print:hidden flex items-center gap-1"
-                >
-                  <span>Abrir en tamaño completo</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+              <p className="text-xs font-bold text-[#D4AF37] print:text-gray-800 flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4" />
+                <span>
+                  {referenceImages.length > 1
+                    ? `Fotos / Imágenes de Muestra Adjuntas (${referenceImages.length})`
+                    : 'Foto / Imagen de Muestra Adjunta'}
+                </span>
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                {referenceImages.map((url, index) => (
+                  <a
+                    key={`${url}-${index}`}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative group shrink-0"
+                    title="Abrir en tamaño completo"
+                  >
+                    <img
+                      src={url}
+                      alt={`Muestra del cliente ${index + 1}`}
+                      className="w-24 h-24 object-cover rounded-xl border border-[#3D3016] print:border-gray-300 shadow-md"
+                    />
+                    <span className="absolute bottom-1 right-1 p-0.5 rounded-full bg-black/60 text-[#E2B755] print:hidden">
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </a>
+                ))}
               </div>
-              <div className="flex items-center gap-4">
-                <img
-                  src={quotation.referenceImageUrl}
-                  alt="Muestra del cliente"
-                  className="w-28 h-28 object-cover rounded-xl border border-[#3D3016] print:border-gray-300 shadow-md"
-                />
-                <div className="text-xs text-[#A89878] print:text-gray-600">
-                  <p className="font-semibold text-[#F3E5C8] print:text-black">Muestra enviada por el cliente</p>
-                  <p className="text-[11px] mt-0.5">Esta imagen sirve como referencia para la restauración o enmarcado.</p>
-                </div>
-              </div>
+              <p className="text-[11px] text-[#A89878] print:text-gray-600">
+                Esta{referenceImages.length > 1 ? 's imágenes sirven' : ' imagen sirve'} como referencia para la restauración o enmarcado.
+              </p>
             </div>
           )}
+
 
           {/* Itemized Table */}
           <div className="overflow-hidden rounded-2xl border border-[#3D3016] print:border-gray-300">
