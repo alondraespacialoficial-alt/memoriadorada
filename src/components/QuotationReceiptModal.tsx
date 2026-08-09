@@ -1,6 +1,5 @@
 import React from 'react';
 import { X, Printer, MessageCircle, Sparkles, CheckCircle2, ShieldCheck, Download, DollarSign, Image as ImageIcon, ExternalLink, FileText } from 'lucide-react';
-import { jsPDF } from 'jspdf';
 import { Quotation, SiteSettings } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { ToastMessage } from './Toast';
@@ -34,7 +33,7 @@ export const QuotationReceiptModal: React.FC<QuotationReceiptModalProps> = ({
 
   const isPaidDeposit = deposit > 0;
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (onShowToast) {
       onShowToast({
         type: 'info',
@@ -44,6 +43,7 @@ export const QuotationReceiptModal: React.FC<QuotationReceiptModalProps> = ({
     }
 
     try {
+      const { jsPDF } = await import('jspdf');
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',

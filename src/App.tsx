@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Product, CartItem, Quotation, SiteSettings } from './types';
 import { INITIAL_PRODUCTS, INITIAL_QUOTATIONS, INITIAL_SETTINGS } from './data/initialData';
 import { Header } from './components/Header';
@@ -9,9 +9,11 @@ import { ProductCatalog } from './components/ProductCatalog';
 import { CartDrawer } from './components/CartDrawer';
 import { Testimonials } from './components/Testimonials';
 import { Footer } from './components/Footer';
-import { AdminLoginModal } from './components/admin/AdminLoginModal';
-import { AdminDashboard } from './components/admin/AdminDashboard';
 import { QuotationReceiptModal } from './components/QuotationReceiptModal';
+
+// Admin panel solo lo usa el staff, se saca del bundle inicial que descargan los clientes
+const AdminLoginModal = lazy(() => import('./components/admin/AdminLoginModal').then((m) => ({ default: m.AdminLoginModal })));
+const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
 import { ImageLightboxModal } from './components/ImageLightboxModal';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import {
@@ -423,28 +425,36 @@ export default function App() {
         />
       )}
 
-      {/* Admin Login Modal (ventas@charlitron.com / 2003) */}
-      <AdminLoginModal
-        isOpen={isAdminModalOpen}
-        onClose={() => setIsAdminModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
+      {/* Admin Login Modal */}
+      {isAdminModalOpen && (
+        <Suspense fallback={null}>
+          <AdminLoginModal
+            isOpen={isAdminModalOpen}
+            onClose={() => setIsAdminModalOpen(false)}
+            onLoginSuccess={handleLoginSuccess}
+          />
+        </Suspense>
+      )}
 
       {/* Admin Panel Dashboard */}
-      <AdminDashboard
-        isOpen={isAdminPanelOpen}
-        onClose={() => setIsAdminPanelOpen(false)}
-        products={products}
-        onSaveProduct={handleSaveProduct}
-        onDeleteProduct={handleDeleteProduct}
-        quotations={quotations}
-        onSaveQuotation={handleSaveQuotation}
-        onDeleteQuotation={handleDeleteQuotation}
-        settings={settings}
-        onSaveSettings={handleSaveSettings}
-        onLogout={handleLogout}
-        onResetDefaults={handleResetDefaults}
-      />
+      {isAdminPanelOpen && (
+        <Suspense fallback={null}>
+          <AdminDashboard
+            isOpen={isAdminPanelOpen}
+            onClose={() => setIsAdminPanelOpen(false)}
+            products={products}
+            onSaveProduct={handleSaveProduct}
+            onDeleteProduct={handleDeleteProduct}
+            quotations={quotations}
+            onSaveQuotation={handleSaveQuotation}
+            onDeleteQuotation={handleDeleteQuotation}
+            settings={settings}
+            onSaveSettings={handleSaveSettings}
+            onLogout={handleLogout}
+            onResetDefaults={handleResetDefaults}
+          />
+        </Suspense>
+      )}
 
       {/* Full Image Zoom Lightbox Modal */}
       <ImageLightboxModal
