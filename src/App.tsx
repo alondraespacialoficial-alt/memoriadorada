@@ -117,13 +117,14 @@ export default function App() {
       if (!client) return;
 
       try {
+        // null = fetch failed (keep local cache); [] = cloud is empty on purpose (trust it)
         const cloudProducts = await fetchProductsFromSupabase();
-        if (cloudProducts && cloudProducts.length > 0) {
+        if (cloudProducts !== null) {
           setProducts(cloudProducts);
         }
 
         const cloudQuotations = await fetchQuotationsFromSupabase();
-        if (cloudQuotations && cloudQuotations.length > 0) {
+        if (cloudQuotations !== null) {
           setQuotations(cloudQuotations);
         }
 
@@ -269,22 +270,34 @@ export default function App() {
       }
       return [product, ...prev];
     });
-    saveProductToSupabase(product).catch((err) => console.error('Supabase product sync err:', err));
-    addToast({
-      type: 'success',
-      title: '💾 Producto Guardado',
-      message: `"${product.name}" guardado correctamente.`,
-    });
+    saveProductToSupabase(product)
+      .then((ok) => {
+        if (ok) {
+          addToast({ type: 'success', title: '💾 Producto Guardado', message: `"${product.name}" guardado correctamente.` });
+        } else {
+          addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: `"${product.name}" se guardó solo en este dispositivo. Revisa tu conexión a Supabase.` });
+        }
+      })
+      .catch((err) => {
+        console.error('Supabase product sync err:', err);
+        addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: `"${product.name}" se guardó solo en este dispositivo. Revisa tu conexión a Supabase.` });
+      });
   };
 
   const handleDeleteProduct = (productId: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== productId));
-    deleteProductFromSupabase(productId).catch((err) => console.error('Supabase product delete err:', err));
-    addToast({
-      type: 'info',
-      title: '🗑️ Producto Eliminado',
-      message: 'El producto ha sido quitado del catálogo.',
-    });
+    deleteProductFromSupabase(productId)
+      .then((ok) => {
+        addToast(
+          ok
+            ? { type: 'info', title: '🗑️ Producto Eliminado', message: 'El producto ha sido quitado del catálogo.' }
+            : { type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'Se quitó en este dispositivo, pero no se borró de Supabase. Revisa tu conexión.' }
+        );
+      })
+      .catch((err) => {
+        console.error('Supabase product delete err:', err);
+        addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'Se quitó en este dispositivo, pero no se borró de Supabase. Revisa tu conexión.' });
+      });
   };
 
   const handleSaveQuotation = (quotation: Quotation) => {
@@ -295,32 +308,50 @@ export default function App() {
       }
       return [quotation, ...prev];
     });
-    saveQuotationToSupabase(quotation).catch((err) => console.error('Supabase quotation sync err:', err));
-    addToast({
-      type: 'success',
-      title: '💾 Cotización Actualizada',
-      message: `Folio ${quotation.id} guardado con estado "${quotation.status}".`,
-    });
+    saveQuotationToSupabase(quotation)
+      .then((ok) => {
+        addToast(
+          ok
+            ? { type: 'success', title: '💾 Cotización Actualizada', message: `Folio ${quotation.id} guardado con estado "${quotation.status}".` }
+            : { type: 'warning', title: '⚠️ No se sincronizó con la nube', message: `Folio ${quotation.id} se guardó solo en este dispositivo. Revisa tu conexión a Supabase.` }
+        );
+      })
+      .catch((err) => {
+        console.error('Supabase quotation sync err:', err);
+        addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: `Folio ${quotation.id} se guardó solo en este dispositivo. Revisa tu conexión a Supabase.` });
+      });
   };
 
   const handleDeleteQuotation = (quotationId: string) => {
     setQuotations((prev) => prev.filter((q) => q.id !== quotationId));
-    deleteQuotationFromSupabase(quotationId).catch((err) => console.error('Supabase quotation delete err:', err));
-    addToast({
-      type: 'info',
-      title: '🗑️ Cotización Eliminada',
-      message: `Folio ${quotationId} ha sido eliminado.`,
-    });
+    deleteQuotationFromSupabase(quotationId)
+      .then((ok) => {
+        addToast(
+          ok
+            ? { type: 'info', title: '🗑️ Cotización Eliminada', message: `Folio ${quotationId} ha sido eliminado.` }
+            : { type: 'warning', title: '⚠️ No se sincronizó con la nube', message: `Folio ${quotationId} se quitó en este dispositivo, pero no de Supabase. Revisa tu conexión.` }
+        );
+      })
+      .catch((err) => {
+        console.error('Supabase quotation delete err:', err);
+        addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: `Folio ${quotationId} se quitó en este dispositivo, pero no de Supabase. Revisa tu conexión.` });
+      });
   };
 
   const handleSaveSettings = (newSettings: SiteSettings) => {
     setSettings(newSettings);
-    saveSettingsToSupabase(newSettings).catch((err) => console.error('Supabase settings sync err:', err));
-    addToast({
-      type: 'success',
-      title: '⚙️ Configuración Guardada',
-      message: 'Los datos de contacto y taller han sido actualizados.',
-    });
+    saveSettingsToSupabase(newSettings)
+      .then((ok) => {
+        addToast(
+          ok
+            ? { type: 'success', title: '⚙️ Configuración Guardada', message: 'Los datos de contacto y taller han sido actualizados.' }
+            : { type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'La configuración se guardó solo en este dispositivo. Revisa tu conexión a Supabase.' }
+        );
+      })
+      .catch((err) => {
+        console.error('Supabase settings sync err:', err);
+        addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'La configuración se guardó solo en este dispositivo. Revisa tu conexión a Supabase.' });
+      });
   };
 
   const handleResetDefaults = () => {
