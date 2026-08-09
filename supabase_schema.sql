@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
   hero_subtitle TEXT,
   hero_tagline TEXT,
   hero_image_url TEXT,
+  before_original_url TEXT,
+  before_restored_url TEXT,
   hero_cta_text TEXT,
   whatsapp_number TEXT,
   whatsapp_display_phone TEXT,
@@ -61,6 +63,10 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
   benefits JSONB DEFAULT '[]'::jsonb,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Si la tabla site_settings ya existía antes de esta actualización, agrega las columnas faltantes
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
 
 -- ============================================================
 -- POLÍTICAS DE SEGURIDAD (RLS - Row Level Security)
