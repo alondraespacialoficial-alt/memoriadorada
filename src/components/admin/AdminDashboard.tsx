@@ -1709,7 +1709,15 @@ ON storage.objects FOR SELECT USING (bucket_id = 'product-images');`}
                   <label className="block text-[#A89878] mb-1 font-semibold">Estado de la Cotización</label>
                   <select
                     value={editingQuotation.status || 'Pendiente'}
-                    onChange={(e) => setEditingQuotation({ ...editingQuotation, status: e.target.value as any })}
+                    onChange={(e) => {
+                      const newStatus = e.target.value as Quotation['status'];
+                      setEditingQuotation({
+                        ...editingQuotation,
+                        status: newStatus,
+                        // Al entregar el trabajo se asume que el cliente liquidó el saldo restante
+                        deposit: newStatus === 'Entregado' ? editingQuotation.totalAmount ?? editingQuotation.deposit : editingQuotation.deposit,
+                      });
+                    }}
                     className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3 py-2 text-[#F3E5C8]"
                   >
                     <option value="Pendiente">Pendiente</option>
@@ -1799,7 +1807,12 @@ ON storage.objects FOR SELECT USING (bucket_id = 'product-images');`}
             onSaveQuotation(updated);
           }}
           onUpdateStatus={(id, newStatus) => {
-            const updated = { ...selectedReceiptQuotation, status: newStatus };
+            // Al entregar el trabajo se asume que el cliente liquidó el saldo restante
+            const updated = {
+              ...selectedReceiptQuotation,
+              status: newStatus,
+              deposit: newStatus === 'Entregado' ? selectedReceiptQuotation.totalAmount : selectedReceiptQuotation.deposit,
+            };
             setSelectedReceiptQuotation(updated);
             onSaveQuotation(updated);
           }}
