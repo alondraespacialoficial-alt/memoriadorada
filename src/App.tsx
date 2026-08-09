@@ -49,13 +49,17 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  // Products are displayed in ascending sortOrder; items without one are sent to the end
+  const sortProducts = (list: Product[]): Product[] =>
+    [...list].sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER));
+
   // Load products from localStorage or default
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('charlitron_products');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try { return sortProducts(JSON.parse(saved)); } catch (e) { console.error(e); }
     }
-    return INITIAL_PRODUCTS;
+    return sortProducts(INITIAL_PRODUCTS);
   });
 
   // Load quotations from localStorage or default
@@ -122,7 +126,7 @@ export default function App() {
         // null = fetch failed (keep local cache); [] = cloud is empty on purpose (trust it)
         const cloudProducts = await fetchProductsFromSupabase();
         if (cloudProducts !== null) {
-          setProducts(cloudProducts);
+          setProducts(sortProducts(cloudProducts));
         }
 
         const cloudQuotations = await fetchQuotationsFromSupabase();
@@ -268,14 +272,17 @@ export default function App() {
   };
 
   const handleSaveProduct = (product: Product) => {
+    let finalProduct = product;
     setProducts((prev) => {
       const exists = prev.some((p) => p.id === product.id);
       if (exists) {
-        return prev.map((p) => (p.id === product.id ? product : p));
+        return sortProducts(prev.map((p) => (p.id === product.id ? product : p)));
       }
-      return [product, ...prev];
+      const maxOrder = prev.reduce((max, p) => Math.max(max, p.sortOrder ?? 0), -1);
+      finalProduct = { ...product, sortOrder: product.sortOrder ?? maxOrder + 1 };
+      return sortProducts([...prev, finalProduct]);
     });
-    saveProductToSupabase(product)
+    saveProductToSupabase(finalProduct)
       .then((ok) => {
         if (ok) {
           addToast({ type: 'success', title: '💾 Producto Guardado', message: `"${product.name}" guardado correctamente.` });
@@ -286,6 +293,24 @@ export default function App() {
       .catch((err) => {
         console.error('Supabase product sync err:', err);
         addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: `"${product.name}" se guardó solo en este dispositivo. Revisa tu conexión a Supabase.` });
+      });
+  };
+
+  // Persists a new display order after the admin moves a product up/down
+  const handleReorderProducts = (reordered: Product[]) => {
+    const withOrder = reordered.map((p, index) => ({ ...p, sortOrder: index }));
+    setProducts(withOrder);
+    Promise.all(withOrder.map((p) => saveProductToSupabase(p)))
+      .then((results) => {
+        if (results.every(Boolean)) {
+          addToast({ type: 'success', title: '↕️ Orden Actualizado', message: 'El nuevo orden de productos se guardó correctamente.' });
+        } else {
+          addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'El orden se guardó solo en este dispositivo. Revisa tu conexión a Supabase.' });
+        }
+      })
+      .catch((err) => {
+        console.error('Supabase reorder sync err:', err);
+        addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'El orden se guardó solo en este dispositivo. Revisa tu conexión a Supabase.' });
       });
   };
 
@@ -481,6 +506,7 @@ export default function App() {
             products={products}
             onSaveProduct={handleSaveProduct}
             onDeleteProduct={handleDeleteProduct}
+            onReorderProducts={handleReorderProducts}
             quotations={quotations}
             onSaveQuotation={handleSaveQuotation}
             onDeleteQuotation={handleDeleteQuotation}

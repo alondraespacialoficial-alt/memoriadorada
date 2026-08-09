@@ -21,8 +21,12 @@ CREATE TABLE IF NOT EXISTS public.products (
   image_url TEXT,
   description TEXT,
   is_popular BOOLEAN DEFAULT false,
+  sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Si la tabla products ya existía antes de esta actualización, agrega la columna faltante
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
 
 -- 2. TABLA DE COTIZACIONES
 CREATE TABLE IF NOT EXISTS public.quotations (

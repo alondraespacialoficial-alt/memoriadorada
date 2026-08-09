@@ -10,6 +10,7 @@ export interface Product {
   imageUrl: string;
   description: string;
   isPopular?: boolean;
+  sortOrder?: number; // controls display order in the catalog; lower shows first
 }
 
 export interface CartItem {

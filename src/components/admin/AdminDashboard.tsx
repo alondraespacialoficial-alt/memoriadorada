@@ -27,9 +27,10 @@ import {
   AlertCircle,
   Upload,
   Printer,
-  FileText
-} from 'lucide-react';
-import { Product, Quotation, SiteSettings } from '../../types';
+  FileText,
+  ArrowUp,
+  ArrowDown
+} from 'lucide-react';import { Product, Quotation, SiteSettings } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { QuotationReceiptModal } from '../QuotationReceiptModal';
 import {
@@ -50,6 +51,7 @@ interface AdminDashboardProps {
   products: Product[];
   onSaveProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
+  onReorderProducts: (products: Product[]) => void;
   quotations: Quotation[];
   onSaveQuotation: (quotation: Quotation) => void;
   onDeleteQuotation: (quotationId: string) => void;
@@ -65,6 +67,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   products,
   onSaveProduct,
   onDeleteProduct,
+  onReorderProducts,
   quotations,
   onSaveQuotation,
   onDeleteQuotation,
@@ -177,6 +180,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   image_url TEXT,
   description TEXT,
   is_popular BOOLEAN DEFAULT false,
+  sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -223,6 +227,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotations ENABLE ROW LEVEL SECURITY;
@@ -416,6 +421,18 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
       p.dimensions.toLowerCase().includes(productSearch.toLowerCase())
   );
 
+  // Moves a product up/down within the full (unfiltered) list to change its display order
+  const moveProduct = (productId: string, direction: 'up' | 'down') => {
+    const currentIndex = products.findIndex((p) => p.id === productId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= products.length) return;
+
+    const reordered = [...products];
+    [reordered[currentIndex], reordered[targetIndex]] = [reordered[targetIndex], reordered[currentIndex]];
+    onReorderProducts(reordered);
+  };
+
   const filteredQuotations = quotations.filter(
     (q) =>
       q.customerName.toLowerCase().includes(quotationSearch.toLowerCase()) ||
@@ -576,6 +593,7 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-[#0B0D10] border-b border-[#3D3016] text-xs font-mono uppercase text-[#A89878]">
+                      <th className="py-3 px-4">Orden</th>
                       <th className="py-3 px-4">Producto</th>
                       <th className="py-3 px-4">Medidas</th>
                       <th className="py-3 px-4">Precio Regular</th>
@@ -587,6 +605,32 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                   <tbody className="divide-y divide-[#262013] text-sm text-[#F3E5C8]">
                     {filteredProducts.map((p) => (
                       <tr key={p.id} className="hover:bg-[#181D26] transition-colors">
+                        <td className="py-3.5 px-4">
+                          {productSearch.trim() ? (
+                            <span className="text-[10px] text-[#6B5A40]" title='Borra la búsqueda para reordenar'>
+                              —
+                            </span>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              <button
+                                onClick={() => moveProduct(p.id, 'up')}
+                                disabled={products.findIndex((x) => x.id === p.id) === 0}
+                                className="p-1 rounded-md bg-[#211A0C] border border-[#524424] text-[#E2B755] hover:bg-[#3D3016] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                title="Subir producto"
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => moveProduct(p.id, 'down')}
+                                disabled={products.findIndex((x) => x.id === p.id) === products.length - 1}
+                                className="p-1 rounded-md bg-[#211A0C] border border-[#524424] text-[#E2B755] hover:bg-[#3D3016] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                title="Bajar producto"
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
                         <td className="py-3.5 px-4 font-serif font-semibold flex items-center gap-3">
                           <img
                             src={p.imageUrl}
@@ -1281,6 +1325,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   image_url TEXT,
   description TEXT,
   is_popular BOOLEAN DEFAULT false,
+  sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

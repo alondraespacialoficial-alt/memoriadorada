@@ -157,7 +157,7 @@ export async function fetchProductsFromSupabase(): Promise<Product[] | null> {
   if (!client) return null;
 
   try {
-    const { data, error } = await client.from('products').select('*').order('created_at', { ascending: false });
+    const { data, error } = await client.from('products').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
     if (error) {
       console.error('Error fetching products from Supabase:', error);
       return null;
@@ -177,6 +177,7 @@ export async function fetchProductsFromSupabase(): Promise<Product[] | null> {
       imageUrl: row.image_url || '',
       description: row.description || '',
       isPopular: Boolean(row.is_popular),
+      sortOrder: row.sort_order != null ? Number(row.sort_order) : undefined,
     }));
   } catch (err) {
     console.error('Supabase fetch error:', err);
@@ -201,6 +202,7 @@ export async function saveProductToSupabase(product: Product): Promise<boolean> 
       image_url: product.imageUrl,
       description: product.description,
       is_popular: product.isPopular ?? false,
+      sort_order: product.sortOrder ?? 0,
     };
 
     const { error } = await client.from('products').upsert(row, { onConflict: 'id' });
