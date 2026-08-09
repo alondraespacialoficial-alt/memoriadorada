@@ -1,0 +1,501 @@
+import React, { useState } from 'react';
+import { X, Trash2, Plus, Minus, MessageCircle, Sparkles, User, Phone, FileText, Upload, CheckCircle, Printer, Download, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { CartItem, SiteSettings, Quotation } from '../types';
+import { formatCurrency, buildWhatsAppLink } from '../utils/formatters';
+import { ToastMessage } from './Toast';
+
+interface CartDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  cartItems: CartItem[];
+  onUpdateQuantity: (productId: string, delta: number) => void;
+  onRemoveItem: (productId: string) => void;
+  onClearCart: () => void;
+  settings: SiteSettings;
+  onRecordQuotation?: (
+    customerName: string,
+    customerPhone: string,
+    items: CartItem[],
+    total: number,
+    notes?: string,
+    referenceImageUrl?: string
+  ) => Quotation | void;
+  onOpenReceipt?: (quotation: Quotation) => void;
+  onShowToast?: (toast: Omit<ToastMessage, 'id'>) => void;
+}
+
+export const CartDrawer: React.FC<CartDrawerProps> = ({
+  isOpen,
+  onClose,
+  cartItems,
+  onUpdateQuantity,
+  onRemoveItem,
+  onClearCart,
+  settings,
+  onRecordQuotation,
+  onOpenReceipt,
+  onShowToast,
+}) => {
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [specialNotes, setSpecialNotes] = useState('');
+  const [uploadedPhotoName, setUploadedPhotoName] = useState<string | undefined>(undefined);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | undefined>(undefined);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [nameError, setNameError] = useState(false);
+
+  if (!isOpen) return null;
+
+  const totalBeforeDiscount = cartItems.reduce((acc, item) => {
+    return acc + item.product.originalPrice * item.quantity;
+  }, 0);
+
+  const totalWithDiscount = cartItems.reduce((acc, item) => {
+    const price = item.product.discountPrice ?? item.product.originalPrice;
+    return acc + price * item.quantity;
+  }, 0);
+
+  const totalSavings = totalBeforeDiscount - totalWithDiscount;
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setUploadedPhotoName(file.name);
+      setIsUploadingPhoto(true);
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Url = reader.result as string;
+        setUploadedPhotoUrl(base64Url);
+
+        try {
+          const { uploadImageToSupabase } = await import('../lib/supabase');
+          const uploadRes = await uploadImageToSupabase(file, 'product-images');
+          if (uploadRes.url) {
+            setUploadedPhotoUrl(uploadRes.url);
+          }
+        } catch (err) {
+          console.warn('Could not upload image to Supabase storage, using base64 preview:', err);
+        }
+
+        setIsUploadingPhoto(false);
+        if (onShowToast) {
+          onShowToast({
+            type: 'success',
+            title: '📷 Foto adjuntada',
+            message: `"${file.name}" guardada como referencia para tu cotización.`,
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setUploadedPhotoName(undefined);
+    setUploadedPhotoUrl(undefined);
+    if (onShowToast) {
+      onShowToast({
+        type: 'info',
+        title: '🗑️ Foto eliminada',
+        message: 'Se quitó la imagen adjunta de tu cotización.',
+      });
+    }
+  };
+
+  const handleGenerateReceipt = () => {
+    if (!customerName.trim()) {
+      setNameError(true);
+      return;
+    }
+    setNameError(false);
+
+    let recorded: Quotation | void;
+    if (onRecordQuotation) {
+      recorded = onRecordQuotation(customerName, customerPhone, cartItems, totalWithDiscount, specialNotes, uploadedPhotoUrl);
+    }
+
+    const receiptObj: Quotation = (recorded as Quotation) || {
+      id: `COT-${Math.floor(1000 + Math.random() * 9000)}`,
+      customerName,
+      customerPhone,
+      date: new Date().toISOString().split('T')[0],
+      items: cartItems.map((i) => ({
+        productName: i.product.name,
+        dimensions: i.product.dimensions,
+        quantity: i.quantity,
+        unitPrice: i.product.discountPrice ?? i.product.originalPrice,
+      })),
+      deposit: 0,
+      totalAmount: totalWithDiscount,
+      status: 'Pendiente',
+      notes: specialNotes,
+      referenceImageUrl: uploadedPhotoUrl,
+    };
+
+    if (onShowToast) {
+      onShowToast({
+        type: 'success',
+        title: '📄 Comprobante PDF generado',
+        message: 'Visualizando folio de cotización en pantalla.',
+      });
+    }
+
+    if (onOpenReceipt) {
+      onOpenReceipt(receiptObj);
+    }
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!customerName.trim()) {
+      setNameError(true);
+      return;
+    }
+    setNameError(false);
+
+    if (onRecordQuotation) {
+      onRecordQuotation(customerName, customerPhone, cartItems, totalWithDiscount, specialNotes, uploadedPhotoUrl);
+    }
+
+    const waUrl = buildWhatsAppLink(
+      settings.whatsappNumber,
+      customerName,
+      customerPhone,
+      cartItems,
+      specialNotes,
+      uploadedPhotoName
+    );
+
+    if (onShowToast) {
+      onShowToast({
+        type: 'success',
+        title: '💬 Abriendo WhatsApp',
+        message: 'Enviando solicitud de cotización al taller.',
+      });
+    }
+
+    window.open(waUrl, '_blank');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-[#0B0D10]/80 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+        <div className="w-screen max-w-md bg-[#0F1217] border-l border-[#3D3016] text-[#F3E5C8] shadow-2xl flex flex-col justify-between">
+          
+          {/* Header */}
+          <div className="p-5 border-b border-[#29200F] bg-[#141821] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#211A0C] border border-[#6B531F] flex items-center justify-center text-[#E2B755]">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="font-serif text-lg font-bold text-[#F3E5C8]">Tu Carrito de Pedido</h2>
+                <p className="text-[11px] text-[#A89878]">{cartItems.length} artículo(s) seleccionados</p>
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="p-2 text-[#A89878] hover:text-[#F3E5C8] hover:bg-[#211A0C] rounded-lg transition-colors"
+              id="cart-close-btn"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Cart Item List */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 divide-y divide-[#262013]">
+            {cartItems.length === 0 ? (
+              <div className="py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-[#1A1E26] border border-[#3D3016] flex items-center justify-center mx-auto text-[#69583A]">
+                  <Sparkles className="w-8 h-8" />
+                </div>
+                <h3 className="font-serif text-base font-bold text-[#F3E5C8]">Tu carrito está vacío</h3>
+                <p className="text-xs text-[#A89878] max-w-xs mx-auto">
+                  Agrega las medidas y servicios que deseas cotizar de nuestro catálogo.
+                </p>
+                <button
+                  onClick={onClose}
+                  className="px-5 py-2.5 rounded-xl bg-[#3D3016] text-[#E2B755] font-bold text-xs hover:bg-[#52411E] transition-all"
+                >
+                  Explorar Catálogo
+                </button>
+              </div>
+            ) : (
+              cartItems.map((item) => {
+                const itemUnitPrice = item.product.discountPrice ?? item.product.originalPrice;
+                const itemTotal = itemUnitPrice * item.quantity;
+                const hasDiscount = !!item.product.discountPrice;
+
+                return (
+                  <div key={item.product.id} className="pt-4 first:pt-0 flex gap-4">
+                    {/* Thumbnail */}
+                    <img
+                      src={item.product.imageUrl}
+                      alt={item.product.name}
+                      className="w-16 h-16 rounded-lg object-cover border border-[#3D3016] shrink-0"
+                    />
+
+                    {/* Details */}
+                    <div className="flex-1 space-y-1">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-serif text-sm font-bold text-[#F3E5C8] leading-tight">
+                          {item.product.name}
+                        </h4>
+                        <button
+                          onClick={() => {
+                            onRemoveItem(item.product.id);
+                            if (onShowToast) {
+                              onShowToast({
+                                type: 'info',
+                                title: '🗑️ Artículo eliminado',
+                                message: `Se quitó ${item.product.name} de tu carrito.`,
+                              });
+                            }
+                          }}
+                          className="text-[#806B45] hover:text-[#EF4444] transition-colors p-1"
+                          title="Eliminar artículo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Dimensions & Prices */}
+                      <div className="text-xs text-[#A89878] flex items-center gap-2">
+                        <span className="font-mono text-[#E2B755] bg-[#211A0C] px-1.5 py-0.5 rounded border border-[#54431B]">
+                          {item.product.dimensions}
+                        </span>
+                        {hasDiscount && (
+                          <span className="line-through text-[#665742] font-mono">
+                            {formatCurrency(item.product.originalPrice)}
+                          </span>
+                        )}
+                        <span className="font-bold text-[#F3E5C8] font-mono">
+                          {formatCurrency(itemUnitPrice)} c/u
+                        </span>
+                      </div>
+
+                      {item.customNote && (
+                        <p className="text-[11px] text-[#D4AF37] italic">
+                          Nota: "{item.customNote}"
+                        </p>
+                      )}
+
+                      {/* Quantity Selector & Item Total */}
+                      <div className="pt-2 flex items-center justify-between">
+                        <div className="flex items-center bg-[#080A0C] border border-[#3D3016] rounded-lg">
+                          <button
+                            onClick={() => onUpdateQuantity(item.product.id, -1)}
+                            className="p-1 text-[#A89878] hover:text-[#F3E5C8]"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="px-2.5 text-xs font-bold font-mono text-[#F3E5C8]">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => onUpdateQuantity(item.product.id, 1)}
+                            className="p-1 text-[#A89878] hover:text-[#F3E5C8]"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        <span className="font-serif text-sm font-bold text-[#F3E5C8]">
+                          {formatCurrency(itemTotal)}
+                        </span>
+                      </div>
+
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer & Order Form */}
+          {cartItems.length > 0 && (
+            <div className="p-5 border-t border-[#29200F] bg-[#141821] space-y-4">
+              
+              {/* Savings Highlight */}
+              {totalSavings > 0 && (
+                <div className="bg-[#1C271C] border border-[#25D366]/30 text-[#25D366] text-xs px-3 py-2 rounded-lg flex items-center justify-between">
+                  <span>¡Felicidades! Tienes un descuento aplicado</span>
+                  <span className="font-bold">- {formatCurrency(totalSavings)}</span>
+                </div>
+              )}
+
+              {/* Totals Summary */}
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between text-[#A89878]">
+                  <span>Subtotal original:</span>
+                  <span className="font-mono line-through">{formatCurrency(totalBeforeDiscount)}</span>
+                </div>
+                <div className="flex justify-between text-base font-bold font-serif text-[#F3E5C8] pt-1 border-t border-[#29200F]">
+                  <span>TOTAL ESTIMADO:</span>
+                  <span className="text-[#E2B755]">{formatCurrency(totalWithDiscount)} MXN</span>
+                </div>
+              </div>
+
+              {/* Mandatory Customer Info Form */}
+              <div className="space-y-3 pt-2 border-t border-[#29200F]">
+                <div>
+                  <label className="block text-xs font-semibold text-[#D4AF37] mb-1 flex items-center gap-1">
+                    <User className="w-3.5 h-3.5" />
+                    <span>Tu Nombre Completo *</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customerName}
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      if (e.target.value.trim()) setNameError(false);
+                    }}
+                    placeholder="Ej. Juan Pérez"
+                    className={`w-full bg-[#080A0C] border ${
+                      nameError ? 'border-red-500' : 'border-[#524424]'
+                    } rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] placeholder-[#665842] focus:outline-none focus:border-[#D4AF37]`}
+                    id="cart-customer-name-input"
+                  />
+                  {nameError && (
+                    <span className="text-[10px] text-red-400 mt-0.5 block">
+                      Por favor escribe tu nombre para solicitar el pedido.
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#A89878] mb-1 flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Teléfono de Contacto (Opcional)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Ej. 444 202 6872"
+                    className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] placeholder-[#665842] focus:outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#A89878] mb-1 flex items-center gap-1">
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Notas especiales o estado de tus fotos</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={specialNotes}
+                    onChange={(e) => setSpecialNotes(e.target.value)}
+                    placeholder="Ej. La foto tiene hongos y está rota por la mitad..."
+                    className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] placeholder-[#665842] focus:outline-none focus:border-[#D4AF37] resize-none"
+                  />
+                </div>
+
+                {/* Photo Attachment Section */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#A89878] mb-1 flex items-center gap-1">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Adjuntar foto de muestra (Opcional)</span>
+                  </label>
+                  
+                  {uploadedPhotoUrl ? (
+                    <div className="p-2.5 rounded-xl bg-[#080A0C] border border-emerald-500/40 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <img
+                          src={uploadedPhotoUrl}
+                          alt="Vista previa"
+                          className="w-10 h-10 object-cover rounded-lg border border-[#3D3016] shrink-0"
+                        />
+                        <div className="truncate">
+                          <p className="text-xs font-bold text-emerald-400 truncate">
+                            {uploadedPhotoName || 'Imagen adjuntada'}
+                          </p>
+                          <p className="text-[10px] text-[#A89878]">Foto cargada con éxito</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="p-1 text-[#A89878] hover:text-red-400 transition-colors"
+                        title="Quitar foto"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                        id="cart-photo-upload"
+                      />
+                      <label
+                        htmlFor="cart-photo-upload"
+                        className="w-full bg-[#080A0C] border border-dashed border-[#524424] hover:border-[#D4AF37] rounded-xl px-3 py-2 text-xs text-[#A89878] hover:text-[#F3E5C8] flex items-center justify-center gap-2 cursor-pointer transition-all"
+                      >
+                        {isUploadingPhoto ? (
+                          <>
+                            <Loader2 className="w-4 h-4 text-[#D4AF37] animate-spin" />
+                            <span>Procesando imagen...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 text-[#E2B755]" />
+                            <span>Seleccionar imagen de tu dispositivo</span>
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Submit CTA WhatsApp Button */}
+              <button
+                onClick={handleSendWhatsApp}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#25D366] to-[#1EAA52] text-[#0B0D10] font-extrabold text-sm hover:brightness-110 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                id="cart-submit-whatsapp-btn"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>Solicitar artículos por WhatsApp</span>
+              </button>
+
+              {/* View / Download PDF Receipt Button */}
+              <button
+                onClick={handleGenerateReceipt}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#211A0C] border border-[#6B531F] text-[#F3E5C8] hover:border-[#D4AF37] font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                id="cart-download-pdf-btn"
+              >
+                <Download className="w-4 h-4 text-[#D4AF37]" />
+                <span>📄 Ver / Descargar Cotización PDF</span>
+              </button>
+
+              {/* Short Notice Box */}
+              <div className="p-3 rounded-xl bg-[#080A0C] border border-[#3D3016] text-[11px] text-[#A89878] space-y-1">
+                <p className="font-bold text-[#E2B755] flex items-center gap-1">
+                  <span>Importante:</span>
+                </p>
+                <p className="leading-relaxed">
+                  Las muestras digitales se envían únicamente para revisión y aprobación. El trabajo final se realiza una vez aceptada la cotización y confirmado el anticipo. Los archivos finales sin marca de agua se entregan solo al completar el pago acordado.
+                </p>
+              </div>
+
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+};
