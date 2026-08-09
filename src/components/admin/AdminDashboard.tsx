@@ -226,11 +226,17 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Permitir lectura publica de productos" ON public.products;
 CREATE POLICY "Permitir lectura publica de productos" ON public.products FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir insercion/actualizacion de productos" ON public.products;
 CREATE POLICY "Permitir insercion/actualizacion de productos" ON public.products FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir lectura de cotizaciones" ON public.quotations;
 CREATE POLICY "Permitir lectura de cotizaciones" ON public.quotations FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir insercion/actualizacion de cotizaciones" ON public.quotations;
 CREATE POLICY "Permitir insercion/actualizacion de cotizaciones" ON public.quotations FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir lectura de configuraciones" ON public.site_settings;
 CREATE POLICY "Permitir lectura de configuraciones" ON public.site_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir actualizacion de configuraciones" ON public.site_settings;
 CREATE POLICY "Permitir actualizacion de configuraciones" ON public.site_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- BUCKET Y POLÍTICAS DE ALMACENAMIENTO DE IMÁGENES (STORAGE)
@@ -238,9 +244,13 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('product-images', 'product-images', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
+DROP POLICY IF EXISTS "Permitir lectura publica de imagenes" ON storage.objects;
 CREATE POLICY "Permitir lectura publica de imagenes" ON storage.objects FOR SELECT USING (bucket_id = 'product-images');
+DROP POLICY IF EXISTS "Permitir subida de imagenes" ON storage.objects;
 CREATE POLICY "Permitir subida de imagenes" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'product-images');
+DROP POLICY IF EXISTS "Permitir edicion de imagenes" ON storage.objects;
 CREATE POLICY "Permitir edicion de imagenes" ON storage.objects FOR UPDATE USING (bucket_id = 'product-images');
+DROP POLICY IF EXISTS "Permitir eliminacion de imagenes" ON storage.objects;
 CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE USING (bucket_id = 'product-images');`;
 
     navigator.clipboard.writeText(sqlCode);
