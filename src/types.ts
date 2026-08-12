@@ -47,6 +47,12 @@ export interface Quotation {
   referenceImageUrls?: string[];
 }
 
+export interface CategoryExample {
+  key: string; // matches a CREATION_CATEGORIES key from data/categories.ts
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+}
+
 export interface SiteSettings {
   logoTitle: string;
   logoSubtitle: string;
@@ -71,4 +77,5 @@ export interface SiteSettings {
     description: string;
     icon: string;
   }[];
+  categoryExamples?: CategoryExample[];
 }

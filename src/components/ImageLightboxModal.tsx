@@ -5,6 +5,7 @@ interface ImageLightboxModalProps {
   isOpen: boolean;
   imageUrl: string | null;
   title?: string;
+  mediaType?: 'image' | 'video';
   onClose: () => void;
 }
 
@@ -12,6 +13,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
   isOpen,
   imageUrl,
   title,
+  mediaType = 'image',
   onClose,
 }) => {
   if (!isOpen || !imageUrl) return null;
@@ -57,11 +59,20 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
 
         {/* Full Image Display Container */}
         <div className="relative w-full max-h-[75vh] flex items-center justify-center overflow-auto rounded-xl bg-[#080A0C] border border-[#29200F]">
-          <img
-            src={imageUrl}
-            alt={title || 'Vista ampliada'}
-            className="max-w-full max-h-[75vh] object-contain rounded-lg transition-transform duration-300"
-          />
+          {mediaType === 'video' ? (
+            <video
+              src={imageUrl}
+              controls
+              autoPlay
+              className="max-w-full max-h-[75vh] object-contain rounded-lg"
+            />
+          ) : (
+            <img
+              src={imageUrl}
+              alt={title || 'Vista ampliada'}
+              className="max-w-full max-h-[75vh] object-contain rounded-lg transition-transform duration-300"
+            />
+          )}
         </div>
 
         <p className="mt-3 text-[11px] text-[#A89878] text-center">

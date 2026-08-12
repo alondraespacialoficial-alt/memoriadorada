@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 -- Si la tabla site_settings ya existía antes de esta actualización, agrega las columnas faltantes
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS category_examples JSONB DEFAULT '[]'::jsonb;
 
 -- ============================================================
 -- POLÍTICAS DE SEGURIDAD (RLS - Row Level Security)

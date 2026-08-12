@@ -45,7 +45,8 @@ export const INITIAL_SETTINGS: SiteSettings = {
       description: 'Preserva el legado histórico de tu familia con acabado de galería.',
       icon: 'Heart'
     }
-  ]
+  ],
+  categoryExamples: []
 };
 
 export const INITIAL_PRODUCTS: Product[] = [

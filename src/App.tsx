@@ -112,13 +112,15 @@ export default function App() {
   const [clientReceiptQuotation, setClientReceiptQuotation] = useState<Quotation | null>(null);
   const [isClientReceiptOpen, setIsClientReceiptOpen] = useState(false);
 
-  // Lightbox Full Image Zoom Modal State
+  // Lightbox Full Image/Video Zoom Modal State
   const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
   const [lightboxTitle, setLightboxTitle] = useState<string | undefined>(undefined);
+  const [lightboxMediaType, setLightboxMediaType] = useState<'image' | 'video'>('image');
 
-  const handleOpenLightbox = (url: string, title?: string) => {
+  const handleOpenLightbox = (url: string, title?: string, mediaType: 'image' | 'video' = 'image') => {
     setLightboxImageUrl(url);
     setLightboxTitle(title);
+    setLightboxMediaType(mediaType);
   };
 
   // Admin Modals & Auth State
@@ -508,7 +510,10 @@ export default function App() {
         <Benefits settings={settings} />
 
         {/* What we can create for you: services + occasions merged */}
-        <WhatWeCreate />
+        <WhatWeCreate
+          examples={settings.categoryExamples || []}
+          onOpenMedia={(url, mediaType, title) => handleOpenLightbox(url, title, mediaType)}
+        />
 
         {/* 4-step purchase process */}
         <ProcessSteps />
@@ -600,11 +605,12 @@ export default function App() {
         </Suspense>
       )}
 
-      {/* Full Image Zoom Lightbox Modal */}
+      {/* Full Image/Video Zoom Lightbox Modal */}
       <ImageLightboxModal
         isOpen={Boolean(lightboxImageUrl)}
         imageUrl={lightboxImageUrl}
         title={lightboxTitle}
+        mediaType={lightboxMediaType}
         onClose={() => setLightboxImageUrl(null)}
       />
 

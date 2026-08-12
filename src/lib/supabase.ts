@@ -474,6 +474,7 @@ export async function fetchSettingsFromSupabase(): Promise<SiteSettings | null> 
       footerHours: data.footer_hours || '',
       footerPhone: data.footer_phone || '',
       benefits: typeof data.benefits === 'string' ? JSON.parse(data.benefits) : data.benefits || [],
+      categoryExamples: typeof data.category_examples === 'string' ? JSON.parse(data.category_examples) : data.category_examples || [],
     };
   } catch (err) {
     console.error('Supabase settings fetch error:', err);
@@ -507,6 +508,7 @@ export async function saveSettingsToSupabase(settings: SiteSettings): Promise<bo
       footer_hours: settings.footerHours,
       footer_phone: settings.footerPhone,
       benefits: settings.benefits,
+      category_examples: settings.categoryExamples ?? [],
       updated_at: new Date().toISOString(),
     };
 

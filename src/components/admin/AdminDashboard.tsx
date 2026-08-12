@@ -30,7 +30,8 @@ import {
   FileText,
   ArrowUp,
   ArrowDown
-} from 'lucide-react';import { Product, Quotation, SiteSettings, GalleryItem } from '../../types';
+} from 'lucide-react';import { Product, Quotation, SiteSettings, GalleryItem, CategoryExample } from '../../types';
+import { CREATION_CATEGORIES } from '../../data/categories';
 import { formatCurrency } from '../../utils/formatters';
 import { QuotationReceiptModal } from '../QuotationReceiptModal';
 import {
@@ -233,6 +234,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 -- Si la tabla site_settings ya existía antes de esta actualización, agrega las columnas faltantes
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS category_examples JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
@@ -370,6 +372,52 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
   // Local copy of Site Settings for editing in settings tab
   const [localSettings, setLocalSettings] = useState<SiteSettings>(settings);
   const [settingsSaved, setSettingsSaved] = useState(false);
+
+  // Category Example Media (photo/video shown when a "Qué podemos crear" chip is tapped)
+  const handleCategoryExampleChange = (key: string, patch: Partial<CategoryExample>) => {
+    setLocalSettings((prev) => {
+      const existing = prev.categoryExamples || [];
+      const idx = existing.findIndex((e) => e.key === key);
+      const updated =
+        idx >= 0
+          ? existing.map((e, i) => (i === idx ? { ...e, ...patch } : e))
+          : [...existing, { key, ...patch }];
+      return { ...prev, categoryExamples: updated };
+    });
+  };
+
+  const handleCategoryExampleUpload = async (file: File | null, key: string) => {
+    if (!file) return;
+    const target = `category_${key}`;
+    setUploadingTarget(target);
+    setUploadNotice(null);
+    const mediaType: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
+
+    let finalUrl: string | null = null;
+    try {
+      const res = await uploadImageToSupabase(file, 'product-images');
+      if (res.url) {
+        finalUrl = res.url;
+        setUploadNotice('¡Archivo subido a Supabase Storage con éxito!');
+      } else {
+        console.warn('Supabase Storage no configurado o falló, usando lector de archivo local base64:', res.error);
+      }
+    } catch (err) {
+      console.warn('Error intentando subir archivo:', err);
+    }
+
+    if (!finalUrl) {
+      finalUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      setUploadNotice(`📷 Archivo "${file.name}" cargado correctamente desde tu dispositivo.`);
+    }
+
+    handleCategoryExampleChange(key, { mediaUrl: finalUrl!, mediaType });
+    setUploadingTarget(null);
+  };
 
   // Search & Filters
   const [productSearch, setProductSearch] = useState('');
@@ -1277,6 +1325,65 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                 </div>
               </div>
 
+              {/* Category Examples Section: media shown when a visitor taps a "Qué podemos crear" chip */}
+              <div className="bg-[#12151B] border border-[#3D3016] p-6 rounded-2xl space-y-4 lg:col-span-2">
+                <h3 className="font-serif text-lg font-bold text-[#E2B755] border-b border-[#29200F] pb-2 flex items-center justify-between">
+                  <span>Ejemplos por Categoría ("¿Qué podemos crear para ti?")</span>
+                  <span className="text-xs font-sans text-[#A89878] font-normal">Foto o video que se abre al tocar cada categoría</span>
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {CREATION_CATEGORIES.map((cat) => {
+                    const example = (localSettings.categoryExamples || []).find((e) => e.key === cat.key);
+                    return (
+                      <div key={cat.key} className="space-y-2 bg-[#080A0C] p-3 rounded-xl border border-[#29200F]">
+                        <label className="flex items-center gap-2 text-xs font-semibold text-[#DFD5C0]">
+                          <cat.icon className="w-4 h-4 text-[#E2B755]" />
+                          {cat.label}
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            value={example?.mediaUrl || ''}
+                            onChange={(e) => handleCategoryExampleChange(cat.key, { mediaUrl: e.target.value })}
+                            className="flex-1 bg-[#12151B] border border-[#3D3016] rounded-xl px-3 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
+                            placeholder="https://... o subir archivo"
+                          />
+                          <label className="cursor-pointer px-3 py-2 bg-[#211A0C] border border-[#524424] hover:border-[#D4AF37] rounded-xl text-[#F3E5C8] flex items-center gap-1.5 text-[10px] font-bold shrink-0">
+                            <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
+                            <span>{uploadingTarget === `category_${cat.key}` ? '...' : 'Subir'}</span>
+                            <input
+                              type="file"
+                              accept="image/*,video/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleCategoryExampleUpload(e.target.files[0], cat.key);
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {example?.mediaUrl && (
+                          <div className="flex items-center gap-2">
+                            {example.mediaType === 'video' ? (
+                              <span className="text-[10px] text-emerald-400 font-bold">🎬 Video listo</span>
+                            ) : (
+                              <img src={example.mediaUrl} alt={cat.label} className="w-10 h-10 object-cover rounded-lg border border-[#3D3016]" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleCategoryExampleChange(cat.key, { mediaUrl: '', mediaType: undefined })}
+                              className="text-[10px] text-red-300 hover:underline"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
 
             <button
@@ -1582,7 +1689,8 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
-ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;`}</pre>
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS category_examples JSONB DEFAULT '[]'::jsonb;`}</pre>
                 </div>
 
                 <div className="p-3 bg-[#1A160E] border border-[#423315] rounded-xl text-[11px] text-[#C9B17E] space-y-1">
