@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, MousePointerClick } from 'lucide-react';
 import { CREATION_CATEGORIES } from '../data/categories';
 import { CategoryExample } from '../types';
 
@@ -10,11 +10,12 @@ interface WhatWeCreateProps {
 
 export const WhatWeCreate: React.FC<WhatWeCreateProps> = ({ examples, onOpenMedia }) => {
   const findExample = (key: string) => examples.find((e) => e.key === key && e.mediaUrl);
+  const hasAnyExample = CREATION_CATEGORIES.some((c) => findExample(c.key));
 
   return (
     <section className="py-16 bg-[#0E1116] border-b border-[#211A0D]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-10 space-y-3">
+        <div className="text-center max-w-3xl mx-auto mb-8 space-y-3">
           <p className="text-xs font-bold uppercase tracking-widest text-[#A89878]">
             Para cualquier momento de tu vida
           </p>
@@ -22,9 +23,18 @@ export const WhatWeCreate: React.FC<WhatWeCreateProps> = ({ examples, onOpenMedi
             ¿Qué podemos crear para ti?
           </h2>
           <p className="text-sm sm:text-base text-[#A89878]">
-            Trae tu idea, casi siempre podemos hacerla realidad. Toca una categoría para ver un ejemplo.
+            Trae tu idea, casi siempre podemos hacerla realidad.
           </p>
         </div>
+
+        {hasAnyExample && (
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#211A0C] border border-[#D4AF37]/50 text-[#E2B755] text-xs sm:text-sm font-semibold">
+              <MousePointerClick className="w-4 h-4 text-[#D4AF37] animate-pulse" />
+              <span>Toca una categoría para ver una foto o video de ejemplo</span>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap justify-center gap-3">
           {CREATION_CATEGORIES.map((item) => {
@@ -35,14 +45,19 @@ export const WhatWeCreate: React.FC<WhatWeCreateProps> = ({ examples, onOpenMedi
                 onClick={() => example && onOpenMedia(example.mediaUrl!, example.mediaType || 'image', item.label)}
                 className={`relative flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#12151B] border transition-all ${
                   example
-                    ? 'border-[#D4AF37]/70 hover:bg-[#181D26] cursor-pointer'
+                    ? 'border-[#D4AF37]/70 hover:bg-[#181D26] hover:scale-105 hover:shadow-lg hover:shadow-[#D4AF37]/10 cursor-pointer'
                     : 'border-[#3D3016]/80 cursor-default opacity-80'
                 }`}
                 title={example ? `Ver ejemplo: ${item.label}` : item.label}
               >
                 <item.icon className="w-4 h-4 text-[#E2B755] shrink-0" />
                 <span className="text-xs sm:text-sm font-medium text-[#DFD5C0]">{item.label}</span>
-                {example && <Eye className="w-3 h-3 text-[#D4AF37] shrink-0" />}
+                {example && (
+                  <span className="flex items-center gap-1 pl-2 ml-1 border-l border-[#3D3016] text-[10px] font-bold text-[#D4AF37] uppercase tracking-wide">
+                    <Eye className="w-3 h-3" />
+                    Ver
+                  </span>
+                )}
               </button>
             );
           })}
