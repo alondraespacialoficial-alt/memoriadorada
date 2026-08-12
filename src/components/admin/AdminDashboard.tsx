@@ -30,7 +30,7 @@ import {
   FileText,
   ArrowUp,
   ArrowDown
-} from 'lucide-react';import { Product, Quotation, SiteSettings } from '../../types';
+} from 'lucide-react';import { Product, Quotation, SiteSettings, GalleryItem } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { QuotationReceiptModal } from '../QuotationReceiptModal';
 import {
@@ -55,6 +55,9 @@ interface AdminDashboardProps {
   quotations: Quotation[];
   onSaveQuotation: (quotation: Quotation) => void;
   onDeleteQuotation: (quotationId: string) => void;
+  galleryItems: GalleryItem[];
+  onSaveGalleryItem: (item: GalleryItem) => void;
+  onDeleteGalleryItem: (itemId: string) => void;
   settings: SiteSettings;
   onSaveSettings: (settings: SiteSettings) => void;
   onLogout: () => void;
@@ -71,12 +74,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   quotations,
   onSaveQuotation,
   onDeleteQuotation,
+  galleryItems,
+  onSaveGalleryItem,
+  onDeleteGalleryItem,
   settings,
   onSaveSettings,
   onLogout,
   onResetDefaults,
 }) => {
-  const [activeTab, setActiveTab] = useState<'products' | 'quotations' | 'settings' | 'banner' | 'database'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'quotations' | 'gallery' | 'settings' | 'banner' | 'database'>('products');
 
   // Supabase State
   const initialCreds = getSupabaseCredentials();
@@ -231,14 +237,27 @@ ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSON
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
 
+CREATE TABLE IF NOT EXISTS public.gallery_items (
+  id TEXT PRIMARY KEY,
+  image_url TEXT NOT NULL,
+  caption TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.gallery_items ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Permitir lectura publica de productos" ON public.products;
 CREATE POLICY "Permitir lectura publica de productos" ON public.products FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Permitir insercion/actualizacion de productos" ON public.products;
 CREATE POLICY "Permitir insercion/actualizacion de productos" ON public.products FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir lectura publica de galeria" ON public.gallery_items;
+CREATE POLICY "Permitir lectura publica de galeria" ON public.gallery_items FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir insercion/actualizacion de galeria" ON public.gallery_items;
+CREATE POLICY "Permitir insercion/actualizacion de galeria" ON public.gallery_items FOR ALL USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS "Permitir lectura de cotizaciones" ON public.quotations;
 CREATE POLICY "Permitir lectura de cotizaciones" ON public.quotations FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Permitir insercion/actualizacion de cotizaciones" ON public.quotations;
@@ -273,7 +292,7 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
 
   const handleImageUpload = async (
     file: File | null,
-    target: 'product' | 'logo' | 'hero' | 'before_original' | 'before_restored' | 'test'
+    target: 'product' | 'logo' | 'hero' | 'before_original' | 'before_restored' | 'gallery_new' | 'test'
   ) => {
     if (!file) return;
     setUploadingTarget(target);
@@ -313,9 +332,27 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
       setLocalSettings((prev) => ({ ...prev, beforeAfterOriginalUrl: finalUrl! }));
     } else if (target === 'before_restored') {
       setLocalSettings((prev) => ({ ...prev, beforeAfterRestoredUrl: finalUrl! }));
+    } else if (target === 'gallery_new') {
+      setNewGalleryImageUrl(finalUrl!);
     }
 
     setUploadingTarget(null);
+  };
+
+  // New Gallery Item Form State (Prueba Social / Entregas Reales)
+  const [newGalleryImageUrl, setNewGalleryImageUrl] = useState('');
+  const [newGalleryCaption, setNewGalleryCaption] = useState('');
+
+  const handleAddGalleryItem = () => {
+    if (!newGalleryImageUrl.trim()) return;
+    onSaveGalleryItem({
+      id: `gallery-${Date.now()}`,
+      imageUrl: newGalleryImageUrl.trim(),
+      caption: newGalleryCaption.trim() || undefined,
+      sortOrder: galleryItems.length,
+    });
+    setNewGalleryImageUrl('');
+    setNewGalleryCaption('');
   };
 
   // Product Editing Modal / Form State
@@ -525,6 +562,18 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>Cotizaciones Aceptadas ({quotations.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('gallery')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${
+              activeTab === 'gallery'
+                ? 'bg-gradient-to-r from-[#D4AF37] to-[#B38F2B] text-[#0B0D10] shadow-lg'
+                : 'bg-[#12151B] text-[#A89878] hover:text-[#F3E5C8] border border-[#3D3016]'
+            }`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span>Galería de Entregas ({galleryItems.length})</span>
           </button>
 
           <button
@@ -877,6 +926,96 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: GALLERY (Prueba Social / Entregas Reales) */}
+        {activeTab === 'gallery' && (
+          <div className="space-y-6">
+            <div className="bg-[#12151B] border border-[#3D3016] p-6 rounded-2xl space-y-4">
+              <h3 className="font-serif text-lg font-bold text-[#E2B755] border-b border-[#29200F] pb-2">
+                Agregar Foto Real de Entrega
+              </h3>
+              <p className="text-xs text-[#A89878]">
+                Sube fotos reales de clientes con sus cuadros o trabajos entregados. Evita renders o imágenes de catálogo genéricas: esto es lo que genera confianza.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={newGalleryImageUrl}
+                      onChange={(e) => setNewGalleryImageUrl(e.target.value)}
+                      className="flex-1 bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
+                      placeholder="https://... o subir archivo"
+                    />
+                    <label className="cursor-pointer px-3 py-2 bg-[#211A0C] border border-[#524424] hover:border-[#D4AF37] rounded-xl text-[#F3E5C8] flex items-center gap-1.5 text-xs font-bold shrink-0">
+                      <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
+                      <span>{uploadingTarget === 'gallery_new' ? 'Subiendo...' : 'Subir PC / Cel'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) handleImageUpload(e.target.files[0], 'gallery_new');
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    value={newGalleryCaption}
+                    onChange={(e) => setNewGalleryCaption(e.target.value)}
+                    className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
+                    placeholder="Descripción breve (opcional), ej: 'Entrega en San Luis Potosí'"
+                  />
+                </div>
+                {newGalleryImageUrl && (
+                  <img src={newGalleryImageUrl} alt="Vista previa" className="w-20 h-20 object-cover rounded-xl border border-[#3D3016] shrink-0" />
+                )}
+              </div>
+
+              <button
+                onClick={handleAddGalleryItem}
+                disabled={!newGalleryImageUrl.trim()}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38F2B] text-[#0B0D10] font-bold text-xs hover:brightness-110 flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Agregar a la Galería</span>
+              </button>
+            </div>
+
+            <div className="bg-[#12151B] border border-[#3D3016] rounded-2xl p-6">
+              <h3 className="font-serif text-lg font-bold text-[#E2B755] border-b border-[#29200F] pb-2 mb-4">
+                Fotos Publicadas ({galleryItems.length})
+              </h3>
+              {galleryItems.length === 0 ? (
+                <p className="text-xs text-[#A89878]">
+                  Aún no hay fotos. Esta sección no aparecerá en la landing hasta que agregues al menos una.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {galleryItems.map((item) => (
+                    <div key={item.id} className="relative group rounded-xl overflow-hidden border border-[#3D3016]">
+                      <img src={item.imageUrl} alt={item.caption || 'Entrega real'} className="w-full h-32 object-cover" />
+                      {item.caption && (
+                        <div className="absolute bottom-0 inset-x-0 bg-[#0B0D10]/85 px-2 py-1">
+                          <span className="text-[10px] text-[#F3E5C8]">{item.caption}</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => onDeleteGalleryItem(item.id)}
+                        className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-950/70 border border-red-800/60 text-red-300 hover:bg-red-900/80 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Borrar foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

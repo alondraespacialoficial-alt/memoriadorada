@@ -19,6 +19,13 @@ export interface CartItem {
   customNote?: string;
 }
 
+export interface GalleryItem {
+  id: string;
+  imageUrl: string;
+  caption?: string;
+  sortOrder?: number;
+}
+
 export interface Quotation {
   id: string;
   customerName: string;

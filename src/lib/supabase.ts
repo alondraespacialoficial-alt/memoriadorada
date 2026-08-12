@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Product, Quotation, SiteSettings } from '../types';
+import { Product, Quotation, SiteSettings, GalleryItem } from '../types';
 
 // Retrieve credentials from environment variables or custom localStorage values
 export function getSupabaseCredentials(): { url: string; key: string } {
@@ -230,6 +230,74 @@ export async function deleteProductFromSupabase(productId: string): Promise<bool
     return true;
   } catch (err) {
     console.error('Delete product error:', err);
+    return false;
+  }
+}
+
+// --- GALLERY API (Prueba Social / Entregas Reales) ---
+
+export async function fetchGalleryItemsFromSupabase(): Promise<GalleryItem[] | null> {
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client.from('gallery_items').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+    if (error) {
+      console.error('Error fetching gallery items from Supabase:', error);
+      return null;
+    }
+
+    if (!data) return [];
+
+    return data.map((row) => ({
+      id: row.id,
+      imageUrl: row.image_url || '',
+      caption: row.caption || undefined,
+      sortOrder: row.sort_order != null ? Number(row.sort_order) : undefined,
+    }));
+  } catch (err) {
+    console.error('Supabase fetch error:', err);
+    return null;
+  }
+}
+
+export async function saveGalleryItemToSupabase(item: GalleryItem): Promise<boolean> {
+  const client = getSupabaseClient();
+  if (!client) return false;
+
+  try {
+    const row = {
+      id: item.id,
+      image_url: item.imageUrl,
+      caption: item.caption ?? null,
+      sort_order: item.sortOrder ?? 0,
+    };
+
+    const { error } = await client.from('gallery_items').upsert(row, { onConflict: 'id' });
+    if (error) {
+      console.error('Error saving gallery item to Supabase:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Save gallery item error:', err);
+    return false;
+  }
+}
+
+export async function deleteGalleryItemFromSupabase(itemId: string): Promise<boolean> {
+  const client = getSupabaseClient();
+  if (!client) return false;
+
+  try {
+    const { error } = await client.from('gallery_items').delete().eq('id', itemId);
+    if (error) {
+      console.error('Error deleting gallery item from Supabase:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Delete gallery item error:', err);
     return false;
   }
 }

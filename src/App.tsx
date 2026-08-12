@@ -1,11 +1,14 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Product, CartItem, Quotation, SiteSettings } from './types';
+import { Product, CartItem, Quotation, SiteSettings, GalleryItem } from './types';
 import { INITIAL_PRODUCTS, INITIAL_QUOTATIONS, INITIAL_SETTINGS } from './data/initialData';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { BeforeAfterSlider } from './components/BeforeAfterSlider';
+import { GallerySection } from './components/GallerySection';
 import { Benefits } from './components/Benefits';
+import { WhatWeCreate } from './components/WhatWeCreate';
 import { ProcessSteps } from './components/ProcessSteps';
+import { NotSureWhatToChoose } from './components/NotSureWhatToChoose';
 import { ProductCatalog } from './components/ProductCatalog';
 import { CartDrawer } from './components/CartDrawer';
 import { Testimonials } from './components/Testimonials';
@@ -22,8 +25,11 @@ import {
   fetchProductsFromSupabase,
   fetchQuotationsFromSupabase,
   fetchSettingsFromSupabase,
+  fetchGalleryItemsFromSupabase,
   saveProductToSupabase,
   deleteProductFromSupabase,
+  saveGalleryItemToSupabase,
+  deleteGalleryItemFromSupabase,
   saveQuotationToSupabase,
   saveQuotationWithRetry,
   flushPendingQuotations,
@@ -80,6 +86,15 @@ export default function App() {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return INITIAL_SETTINGS;
+  });
+
+  // Load gallery items (real delivery photos) from localStorage or default (empty until admin uploads real photos)
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
+    const saved = localStorage.getItem('charlitron_gallery');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return [];
   });
 
   // Cart State
@@ -141,6 +156,11 @@ export default function App() {
           setSettings(cloudSettings);
         }
 
+        const cloudGalleryItems = await fetchGalleryItemsFromSupabase();
+        if (cloudGalleryItems !== null) {
+          setGalleryItems(cloudGalleryItems);
+        }
+
         // Resend any quotations that failed to sync in a previous session
         flushPendingQuotations().catch((err) => console.warn('Could not flush pending quotations:', err));
       } catch (err) {
@@ -155,6 +175,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('charlitron_products', JSON.stringify(products));
   }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('charlitron_gallery', JSON.stringify(galleryItems));
+  }, [galleryItems]);
 
   useEffect(() => {
     localStorage.setItem('charlitron_quotations', JSON.stringify(quotations));
@@ -333,6 +357,43 @@ export default function App() {
       });
   };
 
+  // --- GALLERY HANDLERS (Prueba Social / Entregas Reales) ---
+  const handleSaveGalleryItem = (item: GalleryItem) => {
+    setGalleryItems((prev) => {
+      const exists = prev.some((g) => g.id === item.id);
+      if (exists) return prev.map((g) => (g.id === item.id ? item : g));
+      return [...prev, item];
+    });
+    saveGalleryItemToSupabase(item)
+      .then((ok) => {
+        addToast(
+          ok
+            ? { type: 'success', title: '💾 Foto Guardada', message: 'La foto se agregó a la galería de entregas reales.' }
+            : { type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'La foto se guardó solo en este dispositivo. Revisa tu conexión a Supabase.' }
+        );
+      })
+      .catch((err) => {
+        console.error('Supabase gallery sync err:', err);
+        addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'La foto se guardó solo en este dispositivo. Revisa tu conexión a Supabase.' });
+      });
+  };
+
+  const handleDeleteGalleryItem = (itemId: string) => {
+    setGalleryItems((prev) => prev.filter((g) => g.id !== itemId));
+    deleteGalleryItemFromSupabase(itemId)
+      .then((ok) => {
+        addToast(
+          ok
+            ? { type: 'info', title: '🗑️ Foto Eliminada', message: 'La foto se quitó de la galería.' }
+            : { type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'Se quitó en este dispositivo, pero no de Supabase. Revisa tu conexión.' }
+        );
+      })
+      .catch((err) => {
+        console.error('Supabase gallery delete err:', err);
+        addToast({ type: 'warning', title: '⚠️ No se sincronizó con la nube', message: 'Se quitó en este dispositivo, pero no de Supabase. Revisa tu conexión.' });
+      });
+  };
+
   const handleSaveQuotation = (quotation: Quotation) => {
     setQuotations((prev) => {
       const exists = prev.some((q) => q.id === quotation.id);
@@ -440,11 +501,20 @@ export default function App() {
           onOpenLightbox={handleOpenLightbox}
         />
 
+        {/* Real delivery photos / social proof, hidden until admin uploads real photos */}
+        <GallerySection items={galleryItems} onOpenLightbox={handleOpenLightbox} />
+
         {/* 5 Benefits Overview from flyer */}
         <Benefits settings={settings} />
 
+        {/* What we can create for you: services + occasions merged */}
+        <WhatWeCreate />
+
         {/* 4-step purchase process */}
         <ProcessSteps />
+
+        {/* Simple helper to point undecided visitors toward WhatsApp */}
+        <NotSureWhatToChoose settings={settings} />
 
         {/* Products Catalog with Filters */}
         <ProductCatalog
@@ -519,6 +589,9 @@ export default function App() {
             quotations={quotations}
             onSaveQuotation={handleSaveQuotation}
             onDeleteQuotation={handleDeleteQuotation}
+            galleryItems={galleryItems}
+            onSaveGalleryItem={handleSaveGalleryItem}
+            onDeleteGalleryItem={handleDeleteGalleryItem}
             settings={settings}
             onSaveSettings={handleSaveSettings}
             onLogout={handleLogout}
