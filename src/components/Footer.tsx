@@ -26,7 +26,11 @@ export const Footer: React.FC<FooterProps> = ({
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#8F6C13] p-0.5">
                 <div className="w-full h-full bg-[#0B0D10] rounded-[10px] flex items-center justify-center text-[#E2B755]">
-                  <Sparkles className="w-5 h-5" />
+                  {settings.logoImageUrl ? (
+                    <img src={settings.logoImageUrl} alt="Logo" className="w-6 h-6 object-contain" />
+                  ) : (
+                    <Sparkles className="w-5 h-5" />
+                  )}
                 </div>
               </div>
               <div>

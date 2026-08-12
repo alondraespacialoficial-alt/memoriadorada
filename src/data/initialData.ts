@@ -3,6 +3,7 @@ import { Product, Quotation, SiteSettings } from '../types';
 export const INITIAL_SETTINGS: SiteSettings = {
   logoTitle: 'MEMORIA DORADA',
   logoSubtitle: 'Recuerdos que permanecen',
+  logoImageUrl: 'https://wfirzhgszrxszktmewgr.supabase.co/storage/v1/object/public/product-images/e5f32da0-afd2-49a2-93b4-109c0feea245.png',
   heroTitle: 'Tus recuerdos merecen un lugar para quedarse.',
   heroSubtitle: 'Transformamos fotografías, historias y momentos especiales en obras que puedes volver a mirar todos los días.',
   heroTagline: 'Porque los momentos pasan... los recuerdos permanecen.',
