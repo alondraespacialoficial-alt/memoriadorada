@@ -45,10 +45,10 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
             <span>Demostración de Restauración</span>
           </div>
           <h2 className="font-serif text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FFF6E5] via-[#E8C56B] to-[#C59B27]">
-            Mira la Magia del Antes y Después
+            Hay recuerdos que merecen una segunda vida
           </h2>
           <p className="text-sm sm:text-base text-[#A89878]">
-            Desliza la barra central para comparar una fotografía original maltratada con nuestro proceso de restauración digital y re-enmarcado.
+            Desliza para descubrir la transformación.
           </p>
         </div>
 

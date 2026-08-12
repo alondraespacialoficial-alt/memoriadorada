@@ -27,17 +27,6 @@ export const Benefits: React.FC<BenefitsProps> = ({ settings }) => {
   return (
     <section id="proceso" className="py-16 bg-[#0B0D10] border-b border-[#211A0D]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        
-        {/* Banner header from flyer */}
-        <div className="text-center max-w-3xl mx-auto">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#A89878] mb-2">
-            Restaura tus Recuerdos
-          </p>
-          <h2 className="font-serif text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FFF6E5] via-[#E8C56B] to-[#C59B27]">
-            Restauramos y Recreamos tus Fotografías con Cuidado y Profesionalismo
-          </h2>
-          <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto mt-4" />
-        </div>
 
         {/* PROMINENT: Garantía de Satisfacción Digital */}
         <div className="relative overflow-hidden bg-gradient-to-r from-[#1A150B] via-[#261E0F] to-[#1A150B] border-2 border-[#D4AF37]/80 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-[#D4AF37]/10">
@@ -54,10 +43,10 @@ export const Benefits: React.FC<BenefitsProps> = ({ settings }) => {
                 <span>Muestra Previa Garantizada</span>
               </div>
               <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#F3E5C8]">
-                Garantía de satisfacción digital
+                Tú apruebas antes de imprimir
               </h3>
               <p className="text-sm sm:text-base text-[#D8CBBA] leading-relaxed max-w-3xl">
-                Revisamos tu diseño contigo hasta que quedes conforme y producimos el trabajo final con cuidado y profesionalismo. Siempre verás una muestra previa antes de terminar tu cuadro.
+                Revisamos contigo el diseño antes de producir el trabajo final. Siempre verás una muestra previa antes de terminar tu cuadro.
               </p>
             </div>
 
@@ -76,6 +65,17 @@ export const Benefits: React.FC<BenefitsProps> = ({ settings }) => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Banner header from flyer */}
+        <div className="text-center max-w-3xl mx-auto">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#A89878] mb-2">
+            Restaura tus Recuerdos
+          </p>
+          <h2 className="font-serif text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FFF6E5] via-[#E8C56B] to-[#C59B27]">
+            Restauramos y Recreamos tus Fotografías con Cuidado y Profesionalismo
+          </h2>
+          <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto mt-4" />
         </div>
 
         {/* 5 Benefits Grid */}

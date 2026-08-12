@@ -1,15 +1,15 @@
 import { Product, Quotation, SiteSettings } from '../types';
 
 export const INITIAL_SETTINGS: SiteSettings = {
-  logoTitle: 'CELEBRA TU EVENTO',
-  logoSubtitle: 'RESTAURACIÓN Y RECREACIÓN DE FOTOGRAFÍAS',
-  heroTitle: 'Restauración y Recreación de Fotografías, Cuadros y Marcos',
-  heroSubtitle: 'Damos nueva vida a tus recuerdos más preciados con cuidado artesanal y la más alta calidad digital y enmarcado.',
-  heroTagline: 'Tus recuerdos merecen ser conservados para siempre',
+  logoTitle: 'MEMORIA DORADA',
+  logoSubtitle: 'Recuerdos que permanecen',
+  heroTitle: 'Tus recuerdos merecen un lugar para quedarse.',
+  heroSubtitle: 'Transformamos fotografías, historias y momentos especiales en obras que puedes volver a mirar todos los días.',
+  heroTagline: 'Porque los momentos pasan... los recuerdos permanecen.',
   heroImageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=1200&q=80',
   beforeAfterOriginalUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1200&q=80',
   beforeAfterRestoredUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1200&q=80',
-  heroCtaText: 'Ver Catálogo de Medidas',
+  heroCtaText: 'Cuéntanos tu idea',
   whatsappNumber: '5214442026872',
   whatsappDisplayPhone: '+52 1 444 202 6872',
   primaryColor: 'gold',

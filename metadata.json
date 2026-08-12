@@ -1,6 +1,6 @@
 {
-  "name": "Restauración y Recreación de Fotografías",
-  "description": "Tienda en línea y catálogo de restauración de fotografías, cuadros y marcos con pedidos por WhatsApp y panel administrativo.",
+  "name": "MEMORIA DORADA | Restauración y Recreación de Fotografías",
+  "description": "Tienda en línea y catálogo de MEMORIA DORADA: restauración de fotografías, cuadros y marcos con pedidos por WhatsApp y panel administrativo.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

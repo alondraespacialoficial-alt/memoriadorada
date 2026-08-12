@@ -5,9 +5,11 @@ import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { BeforeAfterSlider } from './components/BeforeAfterSlider';
 import { Benefits } from './components/Benefits';
+import { ProcessSteps } from './components/ProcessSteps';
 import { ProductCatalog } from './components/ProductCatalog';
 import { CartDrawer } from './components/CartDrawer';
 import { Testimonials } from './components/Testimonials';
+import { EmotionalClosing } from './components/EmotionalClosing';
 import { Footer } from './components/Footer';
 import { QuotationReceiptModal } from './components/QuotationReceiptModal';
 
@@ -257,7 +259,7 @@ export default function App() {
     addToast({
       type: 'success',
       title: '🔓 Sesión Iniciada',
-      message: 'Bienvenido al panel de administración de Charlitron Foto Estudio.',
+      message: 'Bienvenido al panel de administración de Memoria Dorada.',
     });
   };
 
@@ -401,8 +403,8 @@ export default function App() {
     }
   };
 
-  const scrollToCatalog = () => {
-    const el = document.getElementById('catalogo');
+  const scrollToBeforeAfter = () => {
+    const el = document.getElementById('antes-despues');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -427,7 +429,7 @@ export default function App() {
         {/* Hero Section */}
         <Hero
           settings={settings}
-          onExploreClick={scrollToCatalog}
+          onViewWorkClick={scrollToBeforeAfter}
           onOpenLightbox={handleOpenLightbox}
         />
 
@@ -441,6 +443,9 @@ export default function App() {
         {/* 5 Benefits Overview from flyer */}
         <Benefits settings={settings} />
 
+        {/* 4-step purchase process */}
+        <ProcessSteps />
+
         {/* Products Catalog with Filters */}
         <ProductCatalog
           products={products}
@@ -450,6 +455,9 @@ export default function App() {
 
         {/* Client Reviews */}
         <Testimonials />
+
+        {/* Closing brand statement */}
+        <EmotionalClosing />
       </main>
 
       {/* Footer */}

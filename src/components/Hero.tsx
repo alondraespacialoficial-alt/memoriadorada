@@ -1,14 +1,14 @@
 import React from 'react';
-import { ArrowRight, ShieldCheck, Sparkles, MessageCircle, Frame, CheckCircle2, ZoomIn } from 'lucide-react';
+import { ShieldCheck, Sparkles, MessageCircle, Frame, CheckCircle2, ZoomIn, Eye } from 'lucide-react';
 import { SiteSettings } from '../types';
 
 interface HeroProps {
   settings: SiteSettings;
-  onExploreClick: () => void;
+  onViewWorkClick: () => void;
   onOpenLightbox?: (url: string, title?: string) => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ settings, onExploreClick, onOpenLightbox }) => {
+export const Hero: React.FC<HeroProps> = ({ settings, onViewWorkClick, onOpenLightbox }) => {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#0B0D10] via-[#12151B] to-[#0B0D10] pt-12 pb-20 border-b border-[#2D2412]">
       {/* Background Decorative Gold Gradients & Glows */}
@@ -60,32 +60,32 @@ export const Hero: React.FC<HeroProps> = ({ settings, onExploreClick, onOpenLigh
 
             {/* Call to Actions */}
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <button
-                onClick={onExploreClick}
+              <a
+                href={`https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent('Hola, me gustaría contarles el recuerdo que quiero conservar.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#C59B27] to-[#8F6C13] text-[#0B0D10] font-bold text-base hover:brightness-110 transition-all shadow-xl shadow-[#D4AF37]/20 flex items-center justify-center gap-3 group"
                 id="hero-explore-btn"
               >
+                <MessageCircle className="w-5 h-5" />
                 <span>{settings.heroCtaText}</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-
-              <a
-                href={`https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent('Hola, me gustaría cotizar la restauración y enmarcado de una fotografía antigua.')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto px-7 py-4 rounded-xl bg-[#141A14] border border-[#25D366]/40 text-[#25D366] font-semibold text-base hover:bg-[#1C271C] transition-all flex items-center justify-center gap-2.5"
-                id="hero-whatsapp-btn"
-              >
-                <MessageCircle className="w-5 h-5 text-[#25D366]" />
-                <span>Cotizar por WhatsApp</span>
               </a>
+
+              <button
+                onClick={onViewWorkClick}
+                className="w-full sm:w-auto px-7 py-4 rounded-xl bg-[#141A14] border border-[#6B531F] text-[#E2B755] font-semibold text-base hover:bg-[#1C1710] transition-all flex items-center justify-center gap-2.5"
+                id="hero-view-work-btn"
+              >
+                <Eye className="w-5 h-5" />
+                <span>Ver trabajos</span>
+              </button>
             </div>
 
             {/* Trust Badges */}
             <div className="pt-4 flex items-center justify-center lg:justify-start gap-6 text-xs text-[#8A7C62]">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-[#D4AF37]" />
-                <span>Garantía de Satisfacción</span>
+                <span>Apruebas antes de imprimir</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Frame className="w-4 h-4 text-[#D4AF37]" />

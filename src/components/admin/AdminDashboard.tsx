@@ -465,7 +465,7 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
               Panel de Administración
             </h1>
             <p className="text-xs text-[#A89878]">
-              Charlitron Restauraciones • {settings.whatsappDisplayPhone}
+              Memoria Dorada • {settings.whatsappDisplayPhone}
             </p>
           </div>
         </div>
