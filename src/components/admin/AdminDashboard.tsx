@@ -926,6 +926,39 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
 
                 <div>
                   <label className="block text-xs font-semibold text-[#A89878] mb-1">
+                    Imagen del Logo
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={localSettings.logoImageUrl || ''}
+                      onChange={(e) => setLocalSettings({ ...localSettings, logoImageUrl: e.target.value })}
+                      className="flex-1 bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
+                      placeholder="https://... o subir archivo"
+                    />
+                    <label className="cursor-pointer px-3 py-2 bg-[#211A0C] border border-[#524424] hover:border-[#D4AF37] rounded-xl text-[#F3E5C8] flex items-center gap-1.5 text-xs font-bold shrink-0">
+                      <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
+                      <span>{uploadingTarget === 'logo' ? 'Subiendo...' : 'Subir'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) handleImageUpload(e.target.files[0], 'logo');
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {localSettings.logoImageUrl && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <img src={localSettings.logoImageUrl} alt="Logo preview" className="w-10 h-10 object-contain rounded-lg border border-[#3D3016] bg-[#080A0C]" />
+                      <span className="text-[10px] text-[#A89878]">Vista previa del logo</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#A89878] mb-1">
                     Teléfono / WhatsApp de Recepción
                   </label>
                   <input

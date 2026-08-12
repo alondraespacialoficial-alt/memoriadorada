@@ -150,3 +150,25 @@ VALUES (
   ]'::jsonb
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- 4. TABLA DE GALERÍA (Prueba Social / Entregas Reales)
+-- Fotos reales de trabajos entregados y clientes con sus cuadros,
+-- administrables desde el panel admin sin necesidad de un desarrollador.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gallery_items (
+  id TEXT PRIMARY KEY,
+  image_url TEXT NOT NULL,
+  caption TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.gallery_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Permitir lectura publica de galeria" ON public.gallery_items;
+CREATE POLICY "Permitir lectura publica de galeria" ON public.gallery_items FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Permitir insercion/actualizacion de galeria" ON public.gallery_items;
+CREATE POLICY "Permitir insercion/actualizacion de galeria" ON public.gallery_items FOR ALL USING (true) WITH CHECK (true);
+
