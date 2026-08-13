@@ -307,10 +307,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-[#0F1217] border-l border-[#3D3016] text-[#F3E5C8] shadow-2xl flex flex-col justify-between">
+        <div className="w-screen max-w-md bg-[#0F1217] border-l border-[#3D3016] text-[#F3E5C8] shadow-2xl flex flex-col h-full">
           
           {/* Header */}
-          <div className="p-5 border-b border-[#29200F] bg-[#141821] flex items-center justify-between">
+          <div className="p-5 border-b border-[#29200F] bg-[#141821] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-[#211A0C] border border-[#6B531F] flex items-center justify-center text-[#E2B755]">
                 <Sparkles className="w-4 h-4" />
@@ -330,8 +330,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </button>
           </div>
 
+          {/* Scrollable area: item list + order form, so submit buttons stay reachable */}
+          <div className="flex-1 overflow-y-auto">
+
           {/* Cart Item List */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4 divide-y divide-[#262013]">
+          <div className="p-5 space-y-4 divide-y divide-[#262013]">
             {cartItems.length === 0 ? (
               <div className="py-16 text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-[#1A1E26] border border-[#3D3016] flex items-center justify-center mx-auto text-[#69583A]">
@@ -689,6 +692,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             </div>
           )}
+
+          </div>
 
         </div>
       </div>
