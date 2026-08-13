@@ -8,13 +8,33 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+// Distancia en línea recta entre dos coordenadas, en kilómetros
+export function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// km dentro de baseFreeKm no cobran; cada km extra se cobra a extraKmPrice
+export function calculateShippingCost(distanceKm: number, baseFreeKm: number, extraKmPrice: number): number {
+  if (distanceKm <= baseFreeKm) return 0;
+  return Math.round((distanceKm - baseFreeKm) * extraKmPrice);
+}
+
 export function buildWhatsAppLink(
   phoneNumber: string,
   customerName: string,
   customerPhone: string,
   cartItems: CartItem[],
   customNotes?: string,
-  uploadedPhotoNames?: string[]
+  uploadedPhotoNames?: string[],
+  shippingCost?: number,
+  shippingDistanceKm?: number
 ): string {
   // Clean phone number (remove spaces, plus sign, etc.)
   const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
@@ -69,7 +89,12 @@ export function buildWhatsAppLink(
   if (savings > 0) {
     message += `🎉 *Descuento total aplicado:* ${formatCurrency(savings)}\n`;
   }
-  message += `💰 *TOTAL ESTIMADO:* *${formatCurrency(totalWithDiscount)} MXN*\n\n`;
+  message += `� *Subtotal artículos:* ${formatCurrency(totalWithDiscount)}\n`;
+  if (typeof shippingCost === 'number') {
+    const distanceLabel = typeof shippingDistanceKm === 'number' ? ` (${shippingDistanceKm.toFixed(1)} km)` : '';
+    message += `🚚 *Envío estimado${distanceLabel}:* ${shippingCost > 0 ? formatCurrency(shippingCost) : 'Gratis'}\n`;
+  }
+  message += `💰 *TOTAL ESTIMADO:* *${formatCurrency(totalWithDiscount + (shippingCost || 0))} MXN*\n\n`;
   message += `Hola, me gustaría solicitar estos artículos y cotizar la restauración/enmarcado de mis fotografías. ¿Cuál es el procedimiento para enviar las imágenes físicas o digitales?`;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;

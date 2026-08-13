@@ -46,7 +46,12 @@ export const INITIAL_SETTINGS: SiteSettings = {
       icon: 'Heart'
     }
   ],
-  categoryExamples: []
+  categoryExamples: [],
+  // Coordenadas aproximadas del centro de San Luis Potosí; ajustar en Admin > Configuración a la ubicación exacta del taller
+  businessLat: 22.1565,
+  businessLng: -100.9855,
+  baseFreeKm: 10,
+  extraKmPrice: 12,
 };
 
 export const INITIAL_PRODUCTS: Product[] = [

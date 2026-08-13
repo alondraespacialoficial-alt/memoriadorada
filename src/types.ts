@@ -45,6 +45,8 @@ export interface Quotation {
   notes?: string;
   referenceImageUrl?: string; // deprecated: kept for backward compatibility with old quotations
   referenceImageUrls?: string[];
+  shippingDistanceKm?: number; // distancia calculada (o corregida por el admin) al punto de entrega
+  shippingCost?: number; // costo de envío incluido dentro de totalAmount, se muestra desglosado
 }
 
 export interface CategoryExample {
@@ -78,4 +80,8 @@ export interface SiteSettings {
     icon: string;
   }[];
   categoryExamples?: CategoryExample[];
+  businessLat?: number; // coordenada del taller, origen para calcular el envío
+  businessLng?: number;
+  baseFreeKm?: number; // km gratis antes de cobrar envío adicional
+  extraKmPrice?: number; // costo por km después de baseFreeKm
 }

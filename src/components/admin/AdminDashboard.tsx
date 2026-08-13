@@ -29,10 +29,11 @@ import {
   Printer,
   FileText,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  MapPin
 } from 'lucide-react';import { Product, Quotation, SiteSettings, GalleryItem, CategoryExample } from '../../types';
 import { CREATION_CATEGORIES } from '../../data/categories';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, calculateShippingCost } from '../../utils/formatters';
 import { QuotationReceiptModal } from '../QuotationReceiptModal';
 import {
   getSupabaseCredentials,
@@ -235,8 +236,14 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS category_examples JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS business_lat NUMERIC;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS business_lng NUMERIC;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS base_free_km NUMERIC DEFAULT 10;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS extra_km_price NUMERIC DEFAULT 12;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS shipping_cost NUMERIC DEFAULT 0;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS shipping_distance_km NUMERIC;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS public.gallery_items (
@@ -1384,6 +1391,62 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                 </div>
               </div>
 
+              {/* Shipping by Distance Section */}
+              <div className="bg-[#12151B] border border-[#3D3016] p-6 rounded-2xl space-y-4 lg:col-span-2">
+                <h3 className="font-serif text-lg font-bold text-[#E2B755] border-b border-[#29200F] pb-2 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  <span>Envío por Distancia</span>
+                </h3>
+                <p className="text-xs text-[#A89878]">
+                  Ubicación fija del taller (punto de salida del repartidor). Consíguela en Google Maps: mantén presionado el pin de tu negocio y copia las coordenadas que aparecen.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A89878] mb-1">Latitud del taller</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={localSettings.businessLat ?? ''}
+                      onChange={(e) => setLocalSettings({ ...localSettings, businessLat: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
+                      placeholder="Ej. 22.1565"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A89878] mb-1">Longitud del taller</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={localSettings.businessLng ?? ''}
+                      onChange={(e) => setLocalSettings({ ...localSettings, businessLng: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
+                      placeholder="Ej. -100.9855"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A89878] mb-1">Km gratis</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={localSettings.baseFreeKm ?? 10}
+                      onChange={(e) => setLocalSettings({ ...localSettings, baseFreeKm: Number(e.target.value) })}
+                      className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A89878] mb-1">Precio por km extra ($ MXN)</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={localSettings.extraKmPrice ?? 12}
+                      onChange={(e) => setLocalSettings({ ...localSettings, extraKmPrice: Number(e.target.value) })}
+                      className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
+                    />
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             <button
@@ -1688,9 +1751,15 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 -- Si las tablas ya existían antes de esta actualización, agrega las columnas faltantes
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS shipping_cost NUMERIC DEFAULT 0;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS shipping_distance_km NUMERIC;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
-ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS category_examples JSONB DEFAULT '[]'::jsonb;`}</pre>
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS category_examples JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS business_lat NUMERIC;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS business_lng NUMERIC;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS base_free_km NUMERIC DEFAULT 10;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS extra_km_price NUMERIC DEFAULT 12;`}</pre>
                 </div>
 
                 <div className="p-3 bg-[#1A160E] border border-[#423315] rounded-xl text-[11px] text-[#C9B17E] space-y-1">
@@ -2041,6 +2110,37 @@ ON storage.objects FOR SELECT USING (bucket_id = 'product-images');`}
                   onChange={(e) => setEditingQuotation({ ...editingQuotation, cost: Number(e.target.value) })}
                   className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3 py-2 text-red-300 font-bold"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 bg-[#080A0C] p-3 rounded-xl border border-[#29200F]">
+                <div className="col-span-2 flex items-center gap-1.5 text-[#E2B755] font-semibold">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Envío (ajustar si la ruta real de entrega cambió)</span>
+                </div>
+                <div>
+                  <label className="block text-[#A89878] mb-1 font-semibold">Distancia (km)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editingQuotation.shippingDistanceKm ?? ''}
+                    onChange={(e) => {
+                      const km = e.target.value === '' ? undefined : Number(e.target.value);
+                      const suggestedCost =
+                        km !== undefined ? calculateShippingCost(km, settings.baseFreeKm ?? 10, settings.extraKmPrice ?? 12) : editingQuotation.shippingCost;
+                      setEditingQuotation({ ...editingQuotation, shippingDistanceKm: km, shippingCost: suggestedCost });
+                    }}
+                    className="w-full bg-[#12151B] border border-[#3D3016] rounded-xl px-3 py-2 text-[#F3E5C8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#A89878] mb-1 font-semibold">Costo de envío ($ MXN)</label>
+                  <input
+                    type="number"
+                    value={editingQuotation.shippingCost ?? 0}
+                    onChange={(e) => setEditingQuotation({ ...editingQuotation, shippingCost: Number(e.target.value) })}
+                    className="w-full bg-[#12151B] border border-[#3D3016] rounded-xl px-3 py-2 text-[#F3E5C8] font-bold"
+                  />
+                </div>
               </div>
 
               <div>

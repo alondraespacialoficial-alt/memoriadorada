@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS public.quotations (
 -- Si la tabla quotations ya existía antes de esta actualización, agrega la columna faltante
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS reference_image_urls JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS cost NUMERIC DEFAULT 0;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS shipping_cost NUMERIC DEFAULT 0;
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS shipping_distance_km NUMERIC;
 
 -- 3. TABLA DE CONFIGURACIÓN DEL SITIO
 CREATE TABLE IF NOT EXISTS public.site_settings (
@@ -78,6 +80,10 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_original_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS before_restored_url TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS category_examples JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS business_lat NUMERIC;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS business_lng NUMERIC;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS base_free_km NUMERIC DEFAULT 10;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS extra_km_price NUMERIC DEFAULT 12;
 
 -- ============================================================
 -- POLÍTICAS DE SEGURIDAD (RLS - Row Level Security)

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Trash2, Plus, Minus, MessageCircle, Sparkles, User, Phone, FileText, Upload, CheckCircle, Printer, Download, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { X, Trash2, Plus, Minus, MessageCircle, Sparkles, User, Phone, FileText, Upload, CheckCircle, Printer, Download, Image as ImageIcon, Loader2, MapPin } from 'lucide-react';
 import { CartItem, SiteSettings, Quotation } from '../types';
-import { formatCurrency, buildWhatsAppLink } from '../utils/formatters';
+import { formatCurrency, buildWhatsAppLink, haversineDistanceKm, calculateShippingCost } from '../utils/formatters';
 import { ToastMessage } from './Toast';
 
 interface CartDrawerProps {
@@ -18,7 +18,9 @@ interface CartDrawerProps {
     items: CartItem[],
     total: number,
     notes?: string,
-    referenceImageUrls?: string[]
+    referenceImageUrls?: string[],
+    shippingCost?: number,
+    shippingDistanceKm?: number
   ) => Quotation | void;
   onOpenReceipt?: (quotation: Quotation) => void;
   onShowToast?: (toast: Omit<ToastMessage, 'id'>) => void;
@@ -42,6 +44,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [uploadedPhotos, setUploadedPhotos] = useState<{ name: string; url: string }[]>([]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [nameError, setNameError] = useState(false);
+  const [shippingDistanceKm, setShippingDistanceKm] = useState<number | null>(null);
+  const [shippingCost, setShippingCost] = useState<number | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState('');
 
   const MAX_PHOTOS = 6;
 
@@ -57,6 +63,49 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   }, 0);
 
   const totalSavings = totalBeforeDiscount - totalWithDiscount;
+
+  const grandTotal = totalWithDiscount + (shippingCost || 0);
+
+  const handleCalculateShipping = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Tu navegador no soporta compartir ubicación.');
+      return;
+    }
+    if (!settings.businessLat || !settings.businessLng) {
+      setLocationError('El taller aún no tiene una ubicación configurada.');
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationError('');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const distanceKm = haversineDistanceKm(
+          position.coords.latitude,
+          position.coords.longitude,
+          settings.businessLat!,
+          settings.businessLng!
+        );
+        const cost = calculateShippingCost(distanceKm, settings.baseFreeKm ?? 10, settings.extraKmPrice ?? 12);
+        setShippingDistanceKm(distanceKm);
+        setShippingCost(cost);
+        setIsLocating(false);
+        if (onShowToast) {
+          onShowToast({
+            type: 'success',
+            title: '📍 Ubicación detectada',
+            message: `Distancia: ${distanceKm.toFixed(1)} km · Envío: ${cost > 0 ? formatCurrency(cost) : 'Gratis'}`,
+          });
+        }
+      },
+      () => {
+        setIsLocating(false);
+        setLocationError('No pudimos obtener tu ubicación. Puedes seguir sin calcular el envío.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files: File[] = e.target.files ? Array.from(e.target.files) : [];
@@ -138,7 +187,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
     let recorded: Quotation | void;
     if (onRecordQuotation) {
-      recorded = onRecordQuotation(customerName, customerPhone, cartItems, totalWithDiscount, specialNotes, photoUrls);
+      recorded = onRecordQuotation(
+        customerName,
+        customerPhone,
+        cartItems,
+        grandTotal,
+        specialNotes,
+        photoUrls,
+        shippingCost || 0,
+        shippingDistanceKm || undefined
+      );
     }
 
     const receiptObj: Quotation = (recorded as Quotation) || {
@@ -153,11 +211,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         unitPrice: i.product.discountPrice ?? i.product.originalPrice,
       })),
       deposit: 0,
-      totalAmount: totalWithDiscount,
+      totalAmount: grandTotal,
       cost: 0,
       status: 'Pendiente',
       notes: specialNotes,
       referenceImageUrls: photoUrls,
+      shippingCost: shippingCost || 0,
+      shippingDistanceKm: shippingDistanceKm || undefined,
     };
 
     if (onShowToast) {
@@ -183,7 +243,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     const photoUrls = uploadedPhotos.map((p) => p.url);
 
     if (onRecordQuotation) {
-      onRecordQuotation(customerName, customerPhone, cartItems, totalWithDiscount, specialNotes, photoUrls);
+      onRecordQuotation(
+        customerName,
+        customerPhone,
+        cartItems,
+        grandTotal,
+        specialNotes,
+        photoUrls,
+        shippingCost || 0,
+        shippingDistanceKm || undefined
+      );
     }
 
     const waUrl = buildWhatsAppLink(
@@ -192,7 +261,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       customerPhone,
       cartItems,
       specialNotes,
-      uploadedPhotos.map((p) => p.name)
+      uploadedPhotos.map((p) => p.name),
+      shippingCost || 0,
+      shippingDistanceKm || undefined
     );
 
     if (onShowToast) {
@@ -366,10 +437,49 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <span>Subtotal original:</span>
                   <span className="font-mono line-through">{formatCurrency(totalBeforeDiscount)}</span>
                 </div>
+                <div className="flex justify-between text-[#A89878]">
+                  <span>Subtotal artículos:</span>
+                  <span className="font-mono text-[#F3E5C8]">{formatCurrency(totalWithDiscount)}</span>
+                </div>
+                {shippingCost !== null && (
+                  <div className="flex justify-between text-[#A89878]">
+                    <span>Envío estimado ({shippingDistanceKm!.toFixed(1)} km):</span>
+                    <span className="font-mono text-[#F3E5C8]">
+                      {shippingCost > 0 ? formatCurrency(shippingCost) : 'Gratis'}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-base font-bold font-serif text-[#F3E5C8] pt-1 border-t border-[#29200F]">
                   <span>TOTAL ESTIMADO:</span>
-                  <span className="text-[#E2B755]">{formatCurrency(totalWithDiscount)} MXN</span>
+                  <span className="text-[#E2B755]">{formatCurrency(grandTotal)} MXN</span>
                 </div>
+              </div>
+
+              {/* Shipping Distance Calculator */}
+              <div className="p-3 rounded-xl bg-[#080A0C] border border-[#3D3016] space-y-2">
+                <button
+                  type="button"
+                  onClick={handleCalculateShipping}
+                  disabled={isLocating}
+                  className="w-full py-2 px-3 rounded-lg bg-[#211A0C] border border-[#524424] hover:border-[#D4AF37] text-xs font-bold text-[#F3E5C8] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isLocating ? (
+                    <Loader2 className="w-4 h-4 text-[#D4AF37] animate-spin" />
+                  ) : (
+                    <MapPin className="w-4 h-4 text-[#E2B755]" />
+                  )}
+                  <span>
+                    {isLocating
+                      ? 'Calculando distancia...'
+                      : shippingCost !== null
+                      ? 'Recalcular envío con mi ubicación'
+                      : 'Calcular envío con mi ubicación'}
+                  </span>
+                </button>
+                <p className="text-[10px] text-[#A89878] leading-relaxed">
+                  Comparte tu ubicación para estimar el costo de envío ({settings.baseFreeKm ?? 10} km gratis, luego {formatCurrency(settings.extraKmPrice ?? 12)} por km extra). Si aún no sabes la dirección exacta de entrega, puedes omitir este paso: el envío final se confirma al momento de coordinar la entrega.
+                </p>
+                {locationError && <p className="text-[10px] text-red-400">{locationError}</p>}
               </div>
 
               {/* Mandatory Customer Info Form */}

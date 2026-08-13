@@ -332,6 +332,8 @@ export async function fetchQuotationsFromSupabase(): Promise<Quotation[] | null>
       referenceImageUrls: (typeof row.reference_image_urls === 'string'
         ? JSON.parse(row.reference_image_urls)
         : row.reference_image_urls) || undefined,
+      shippingCost: row.shipping_cost !== null && row.shipping_cost !== undefined ? Number(row.shipping_cost) : undefined,
+      shippingDistanceKm: row.shipping_distance_km !== null && row.shipping_distance_km !== undefined ? Number(row.shipping_distance_km) : undefined,
     }));
   } catch (err) {
     console.error('Supabase quotations fetch error:', err);
@@ -357,6 +359,8 @@ export async function saveQuotationToSupabase(quotation: Quotation): Promise<boo
       status: quotation.status,
       notes: quotation.notes ?? null,
       reference_image_urls: quotation.referenceImageUrls ?? null,
+      shipping_cost: quotation.shippingCost ?? null,
+      shipping_distance_km: quotation.shippingDistanceKm ?? null,
     };
 
     const { error } = await client.from('quotations').upsert(row, { onConflict: 'id' });
@@ -475,6 +479,10 @@ export async function fetchSettingsFromSupabase(): Promise<SiteSettings | null> 
       footerPhone: data.footer_phone || '',
       benefits: typeof data.benefits === 'string' ? JSON.parse(data.benefits) : data.benefits || [],
       categoryExamples: typeof data.category_examples === 'string' ? JSON.parse(data.category_examples) : data.category_examples || [],
+      businessLat: data.business_lat !== null && data.business_lat !== undefined ? Number(data.business_lat) : undefined,
+      businessLng: data.business_lng !== null && data.business_lng !== undefined ? Number(data.business_lng) : undefined,
+      baseFreeKm: data.base_free_km !== null && data.base_free_km !== undefined ? Number(data.base_free_km) : undefined,
+      extraKmPrice: data.extra_km_price !== null && data.extra_km_price !== undefined ? Number(data.extra_km_price) : undefined,
     };
   } catch (err) {
     console.error('Supabase settings fetch error:', err);
@@ -509,6 +517,10 @@ export async function saveSettingsToSupabase(settings: SiteSettings): Promise<bo
       footer_phone: settings.footerPhone,
       benefits: settings.benefits,
       category_examples: settings.categoryExamples ?? [],
+      business_lat: settings.businessLat ?? null,
+      business_lng: settings.businessLng ?? null,
+      base_free_km: settings.baseFreeKm ?? null,
+      extra_km_price: settings.extraKmPrice ?? null,
       updated_at: new Date().toISOString(),
     };
 

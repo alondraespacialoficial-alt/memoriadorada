@@ -245,7 +245,9 @@ export default function App() {
     items: CartItem[],
     total: number,
     notes?: string,
-    referenceImageUrls?: string[]
+    referenceImageUrls?: string[],
+    shippingCost?: number,
+    shippingDistanceKm?: number
   ): Quotation => {
     const newQuotation: Quotation = {
       id: `COT-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -264,6 +266,8 @@ export default function App() {
       status: 'Pendiente',
       notes: notes || 'Solicitado directamente desde la tienda',
       referenceImageUrls: referenceImageUrls && referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
+      shippingCost: shippingCost || undefined,
+      shippingDistanceKm: shippingDistanceKm || undefined,
     };
 
     setQuotations((prev) => [newQuotation, ...prev]);

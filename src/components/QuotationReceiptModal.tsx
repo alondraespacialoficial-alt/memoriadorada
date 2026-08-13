@@ -177,12 +177,14 @@ export const QuotationReceiptModal: React.FC<QuotationReceiptModalProps> = ({
       y += 4;
 
       // Totals Box (Right Side)
+      const hasShipping = typeof quotation.shippingCost === 'number' && quotation.shippingCost > 0;
+      const shippingExtra = hasShipping ? 5 : 0;
       const totalsWidth = 75;
       const totalsX = pageWidth - 14 - totalsWidth;
       doc.setFillColor(250, 250, 252);
-      doc.rect(totalsX, y, totalsWidth, 28, 'F');
+      doc.rect(totalsX, y, totalsWidth, 28 + shippingExtra, 'F');
       doc.setDrawColor(220, 220, 225);
-      doc.rect(totalsX, y, totalsWidth, 28, 'S');
+      doc.rect(totalsX, y, totalsWidth, 28 + shippingExtra, 'S');
 
       doc.setFontSize(8);
       doc.setTextColor(80, 80, 80);
@@ -191,28 +193,37 @@ export const QuotationReceiptModal: React.FC<QuotationReceiptModalProps> = ({
       doc.setTextColor(17, 17, 17);
       doc.text(formatCurrency(total), pageWidth - 18, y + 6, { align: 'right' });
 
+      if (hasShipping) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(120, 120, 120);
+        const distanceLabel = quotation.shippingDistanceKm ? ` · ${quotation.shippingDistanceKm.toFixed(1)} km` : '';
+        doc.text(`(incluye envío ${formatCurrency(quotation.shippingCost!)}${distanceLabel})`, totalsX + 4, y + 9.5);
+        doc.setFontSize(8);
+      }
+
       if (isPaidDeposit) {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(6, 95, 70);
-        doc.text('(-) Anticipo Recibido:', totalsX + 4, y + 12);
+        doc.text('(-) Anticipo Recibido:', totalsX + 4, y + 12 + shippingExtra);
         doc.setFont('helvetica', 'bold');
-        doc.text(formatCurrency(deposit), pageWidth - 18, y + 12, { align: 'right' });
+        doc.text(formatCurrency(deposit), pageWidth - 18, y + 12 + shippingExtra, { align: 'right' });
       } else {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(160, 120, 20);
-        doc.text('Anticipo Requerido (50%):', totalsX + 4, y + 12);
+        doc.text('Anticipo Requerido (50%):', totalsX + 4, y + 12 + shippingExtra);
         doc.setFont('helvetica', 'bold');
-        doc.text(formatCurrency(Math.round(total * 0.5)), pageWidth - 18, y + 12, { align: 'right' });
+        doc.text(formatCurrency(Math.round(total * 0.5)), pageWidth - 18, y + 12 + shippingExtra, { align: 'right' });
       }
 
       doc.setDrawColor(180, 140, 30);
-      doc.line(totalsX + 4, y + 17, pageWidth - 18, y + 17);
+      doc.line(totalsX + 4, y + 17 + shippingExtra, pageWidth - 18, y + 17 + shippingExtra);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(160, 120, 20);
-      doc.text(isPaidDeposit ? 'SALDO PENDIENTE:' : 'SALDO RESTANTE:', totalsX + 4, y + 23);
-      doc.text(formatCurrency(remaining), pageWidth - 18, y + 23, { align: 'right' });
+      doc.text(isPaidDeposit ? 'SALDO PENDIENTE:' : 'SALDO RESTANTE:', totalsX + 4, y + 23 + shippingExtra);
+      doc.text(formatCurrency(remaining), pageWidth - 18, y + 23 + shippingExtra, { align: 'right' });
 
       // Guarantee & Conditions Box (Left Side)
       const termsWidth = pageWidth - 28 - totalsWidth - 6;
@@ -714,6 +725,15 @@ export const QuotationReceiptModal: React.FC<QuotationReceiptModalProps> = ({
                 <span>Monto Total del Trabajo:</span>
                 <span className="font-mono font-bold text-[#F3E5C8] print:text-black">{formatCurrency(total)}</span>
               </div>
+
+              {!!quotation.shippingCost && (
+                <div className="flex justify-between items-center text-xs text-[#A89878] print:text-gray-600">
+                  <span>
+                    Incluye envío{quotation.shippingDistanceKm ? ` (${quotation.shippingDistanceKm.toFixed(1)} km)` : ''}:
+                  </span>
+                  <span className="font-mono text-[#F3E5C8] print:text-black">{formatCurrency(quotation.shippingCost)}</span>
+                </div>
+              )}
 
               {isPaidDeposit ? (
                 <div className="flex justify-between items-center text-xs text-emerald-400 print:text-emerald-800 font-bold border-t border-[#29200F] print:border-gray-200 pt-2">
