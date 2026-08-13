@@ -1423,6 +1423,11 @@ CREATE POLICY "Permitir eliminacion de imagenes" ON storage.objects FOR DELETE U
                       className="w-full bg-[#080A0C] border border-[#3D3016] rounded-xl px-3.5 py-2 text-xs text-[#F3E5C8] focus:border-[#D4AF37]"
                       placeholder="Ej. -100.9855"
                     />
+                    {typeof localSettings.businessLng === 'number' && localSettings.businessLng > 0 && (
+                      <p className="text-[10px] text-red-400 mt-1">
+                        ⚠️ En México la longitud siempre es negativa. ¿Olvidaste el signo "-"? Debería ser -{localSettings.businessLng}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-[#A89878] mb-1">Km gratis</label>
