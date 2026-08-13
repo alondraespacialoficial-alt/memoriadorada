@@ -2146,6 +2146,22 @@ ON storage.objects FOR SELECT USING (bucket_id = 'product-images');`}
                     className="w-full bg-[#12151B] border border-[#3D3016] rounded-xl px-3 py-2 text-[#F3E5C8] font-bold"
                   />
                 </div>
+                {(() => {
+                  const itemsSubtotal = (editingQuotation.items || []).reduce(
+                    (sum, i) => sum + (i.unitPrice || 0) * (i.quantity || 0),
+                    0
+                  );
+                  const suggestedTotal = itemsSubtotal + (editingQuotation.shippingCost || 0);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setEditingQuotation({ ...editingQuotation, totalAmount: suggestedTotal })}
+                      className="col-span-2 text-[10px] text-[#A89878] hover:text-[#D4AF37] underline text-left"
+                    >
+                      Usar {formatCurrency(suggestedTotal)} (subtotal + envío) como Pago Total
+                    </button>
+                  );
+                })()}
               </div>
 
               <div>

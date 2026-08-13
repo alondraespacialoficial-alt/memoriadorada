@@ -48,6 +48,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [shippingCost, setShippingCost] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [manualKmInput, setManualKmInput] = useState('');
+  const [showManualKm, setShowManualKm] = useState(false);
 
   const MAX_PHOTOS = 6;
 
@@ -105,6 +107,25 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  const handleApplyManualKm = () => {
+    const km = Number(manualKmInput);
+    if (!manualKmInput.trim() || isNaN(km) || km < 0) {
+      setLocationError('Escribe una distancia válida en kilómetros.');
+      return;
+    }
+    const cost = calculateShippingCost(km, settings.baseFreeKm ?? 10, settings.extraKmPrice ?? 12);
+    setShippingDistanceKm(km);
+    setShippingCost(cost);
+    setLocationError('');
+    if (onShowToast) {
+      onShowToast({
+        type: 'success',
+        title: '📏 Distancia registrada',
+        message: `Distancia: ${km.toFixed(1)} km · Envío: ${cost > 0 ? formatCurrency(cost) : 'Gratis'}`,
+      });
+    }
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -480,6 +501,35 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   Comparte tu ubicación para estimar el costo de envío ({settings.baseFreeKm ?? 10} km gratis, luego {formatCurrency(settings.extraKmPrice ?? 12)} por km extra). Si aún no sabes la dirección exacta de entrega, puedes omitir este paso: el envío final se confirma al momento de coordinar la entrega.
                 </p>
                 {locationError && <p className="text-[10px] text-red-400">{locationError}</p>}
+
+                {!showManualKm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowManualKm(true)}
+                    className="text-[10px] text-[#A89878] hover:text-[#D4AF37] underline"
+                  >
+                    ¿No quieres compartir tu ubicación? Escribe tu distancia aproximada
+                  </button>
+                ) : (
+                  <div className="flex gap-2 items-start">
+                    <input
+                      type="number"
+                      step="any"
+                      min={0}
+                      value={manualKmInput}
+                      onChange={(e) => setManualKmInput(e.target.value)}
+                      placeholder="Km aprox. desde el taller"
+                      className="flex-1 bg-[#080A0C] border border-[#3D3016] rounded-lg px-3 py-2 text-xs text-[#F3E5C8] placeholder-[#665842] focus:outline-none focus:border-[#D4AF37]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyManualKm}
+                      className="px-3 py-2 rounded-lg bg-[#211A0C] border border-[#524424] hover:border-[#D4AF37] text-xs font-bold text-[#F3E5C8] shrink-0"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Mandatory Customer Info Form */}
