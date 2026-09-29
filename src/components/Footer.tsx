@@ -113,6 +113,22 @@ export const Footer: React.FC<FooterProps> = ({
             <Heart className="w-3.5 h-3.5 text-[#D4AF37] inline fill-[#D4AF37]" />
           </div>
 
+          <a
+            href="https://charlitronviajerodeltiempo.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Calidad de Charlitron, Viajero del Tiempo. Abrir su página web"
+            className="flex flex-col items-center gap-1 text-[#A89878] hover:text-[#F3E5C8] transition-colors"
+          >
+            <span className="text-[10px] uppercase tracking-wider">Calidad de</span>
+            <img
+              src="https://osulhjzqgqzodyjamrmn.supabase.co/storage/v1/object/public/images/image-1783881269239.png"
+              alt="Charlitron, Viajero del Tiempo"
+              className="h-10 w-36 object-contain"
+              loading="lazy"
+            />
+          </a>
+
           <div className="flex items-center gap-4">
             {isAdminLoggedIn ? (
               <button
